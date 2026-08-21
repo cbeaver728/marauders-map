@@ -1420,9 +1420,33 @@ function drawParchment(f){
    FOOTPRINTS
    ================================================================ */
 var LIFE=6.2;
-/* a bare foot, pointing forward: big toe on the inside, then four smaller ones */
-var TOES=[[-2.35,-7.15,1.25,1.38],[-0.55,-8.05,0.96,1.06],[0.95,-7.95,0.88,0.98],
-          [2.25,-7.40,0.78,0.88],[3.30,-6.45,0.66,0.76]];
+/* The sole of a school shoe, pointing forward: a rounded toe box, a waisted
+   arch, and a separate heel block behind it. Cached per size, since a busy
+   floor draws several hundred of these a frame. */
+var SHOE={};
+function shoe(sc){
+  var key='s'+sc;
+  if(SHOE[key]) return SHOE[key];
+  var p=new Path2D(), s=sc;
+  /* sole: toe box, outer edge, waist */
+  p.moveTo(-3.05*s,-4.80*s);
+  p.bezierCurveTo(-3.25*s,-7.55*s, -1.90*s,-8.70*s,  0.15*s,-8.70*s);
+  p.bezierCurveTo( 2.25*s,-8.70*s,  3.35*s,-7.25*s,  3.25*s,-4.80*s);
+  p.bezierCurveTo( 3.15*s,-2.20*s,  2.05*s,-0.40*s,  2.05*s, 1.20*s);
+  p.bezierCurveTo( 2.05*s, 2.20*s,  2.15*s, 2.60*s,  2.15*s, 3.05*s);
+  p.lineTo(-2.05*s, 3.05*s);
+  p.bezierCurveTo(-2.05*s, 2.60*s, -1.95*s, 2.20*s, -1.95*s, 1.20*s);
+  p.bezierCurveTo(-1.95*s,-0.40*s, -2.95*s,-2.20*s, -3.05*s,-4.80*s);
+  p.closePath();
+  /* heel block */
+  p.moveTo(-2.15*s, 4.05*s);
+  p.lineTo( 2.25*s, 4.05*s);
+  p.bezierCurveTo( 2.55*s, 6.05*s,  2.10*s, 7.85*s,  0.05*s, 7.85*s);
+  p.bezierCurveTo(-2.00*s, 7.85*s, -2.45*s, 6.05*s, -2.15*s, 4.05*s);
+  p.closePath();
+  SHOE[key]=p;
+  return p;
+}
 function footAlpha(t){
   if(t<0.22) return t/0.22;
   if(t>LIFE-2.0) return Math.max(0,(LIFE-t)/2.0);
@@ -1435,14 +1459,7 @@ function drawFoot(style,x,y,a,side,alpha,k){
   var i;
   switch(style){
   case 'human': case 'huge':
-    var sc=style==='huge'?1.85:1;
-    g.beginPath();g.ellipse(0.50*sc, 4.60*sc,2.45*sc,3.00*sc,0,0,6.2832);g.fill();  /* heel */
-    g.beginPath();g.ellipse(1.85*sc, 0.70*sc,1.60*sc,3.50*sc,0,0,6.2832);g.fill();  /* outer edge */
-    g.beginPath();g.ellipse(0.35*sc,-3.50*sc,3.30*sc,2.95*sc,0,0,6.2832);g.fill();  /* ball */
-    for(i=0;i<5;i++){
-      g.beginPath();
-      g.ellipse(TOES[i][0]*sc,TOES[i][1]*sc,TOES[i][2]*sc,TOES[i][3]*sc,0,0,6.2832);g.fill();
-    }
+    g.fill(shoe(style==='huge'?1.85:1));
     break;
   case 'paw':
     g.beginPath();g.ellipse(0,0,3.0,2.6,0,0,6.2832);g.fill();
@@ -1453,14 +1470,9 @@ function drawFoot(style,x,y,a,side,alpha,k){
     for(i=0;i<3;i++){g.beginPath();g.ellipse(-1.3+i*1.3,-2.9,0.6,0.7,0,0,6.2832);g.fill();}
     break;
   case 'ghost':
-    g.globalAlpha=0.55;g.lineWidth=0.85;g.setLineDash([1.7,2.1]);
-    g.beginPath();g.ellipse(0.50, 4.60,2.35,2.90,0,0,6.2832);g.stroke();
-    g.beginPath();g.ellipse(0.35,-3.50,3.20,2.85,0,0,6.2832);g.stroke();
+    g.globalAlpha=0.5;g.lineWidth=0.85;g.setLineDash([1.8,2.2]);
+    g.stroke(shoe(1));
     g.setLineDash([]);
-    for(i=0;i<5;i++){
-      g.beginPath();
-      g.ellipse(TOES[i][0],TOES[i][1],TOES[i][2]*0.78,TOES[i][3]*0.78,0,0,6.2832);g.stroke();
-    }
     break;
   case 'claw':
     for(i=0;i<3;i++){

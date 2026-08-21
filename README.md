@@ -21,8 +21,8 @@ classroom, hoops on the Quidditch pitch.
 Around seventy inhabitants walk it in real time. The castle is a graph of rooms and
 corridors, so people genuinely path from where they are to where they are going, taking
 staircases between floors, leaving footprints that ink in and fade over about six
-seconds. Foot shapes differ by who is walking: bare feet, cat paws, hippogriff claws,
-centaur hooves, dotted ghost prints, a serpent's slither trail.
+seconds. Prints differ by who is walking: school shoes for the human beings, cat paws,
+hippogriff claws, centaur hooves, dotted ghost soles, a serpent's slither trail.
 
 ### Levels
 
