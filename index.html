@@ -1,0 +1,1958 @@
+<title>The Marauder's Map</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&family=Cinzel:wght@400;600;700&display=swap">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#2b1407">
+<style>
+  :root{
+    --parch:#d9c298;
+    --parch-lo:#c0a074;
+    --parch-hi:#e7d5ae;
+    --ink:#4a2410;
+    --ink-deep:#2b1407;
+    --ink-soft:#7a4a22;
+    --burnt:#3a2110;
+    --ui:'IM Fell English SC',Georgia,'Times New Roman',serif;
+    --prose:'IM Fell English',Georgia,serif;
+    --title:'Cinzel','IM Fell English SC',Georgia,serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;height:100%;width:100%;overflow:hidden;background:#241408;color:var(--ink);
+    font-family:var(--ui);-webkit-font-smoothing:antialiased;
+    -webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;overscroll-behavior:none}
+  canvas#map{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;background:#241408}
+
+  .hud{position:fixed;z-index:20;pointer-events:none}
+  .hud *{pointer-events:auto}
+
+  .plate{
+    background:linear-gradient(175deg,rgba(233,214,177,.93),rgba(198,166,120,.93));
+    border:1px solid rgba(43,20,7,.5);
+    box-shadow:0 2px 0 rgba(43,20,7,.28), 0 10px 26px rgba(0,0,0,.45), inset 0 0 22px rgba(120,80,38,.35);
+    color:var(--ink-deep);
+  }
+
+  #topleft{top:max(10px,env(safe-area-inset-top));left:10px;max-width:min(58vw,420px)}
+  #brand{padding:7px 13px 8px;line-height:1}
+  #brand .sub{font-family:var(--prose);font-style:italic;font-size:10px;letter-spacing:.02em;opacity:.78;display:block;margin-bottom:3px}
+  #brand .nm{font-family:var(--title);font-weight:700;font-size:clamp(13px,3.4vw,19px);letter-spacing:.13em;text-transform:uppercase;display:block;cursor:pointer}
+
+  #topright{top:max(10px,env(safe-area-inset-top));right:10px;text-align:right}
+  #clock{padding:6px 11px 7px;line-height:1.2}
+  #clock .t{font-size:clamp(14px,4vw,20px);letter-spacing:.06em;font-variant-numeric:tabular-nums;display:block}
+  #clock .d{font-family:var(--prose);font-style:italic;font-size:10px;opacity:.8;display:block}
+
+  #rail{top:50%;right:8px;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;
+        max-height:66vh;overflow:auto;scrollbar-width:none;padding:2px}
+  #rail::-webkit-scrollbar{display:none}
+  .fbtn{font-family:var(--ui);font-size:clamp(9px,2.5vw,12px);letter-spacing:.09em;text-transform:uppercase;
+    padding:6px 9px;border:1px solid rgba(43,20,7,.42);background:rgba(216,192,150,.82);color:var(--ink);
+    cursor:pointer;text-align:right;white-space:nowrap;transition:background .16s,color .16s,transform .16s;
+    box-shadow:inset 0 0 14px rgba(120,80,38,.28)}
+  .fbtn:hover{background:rgba(231,213,176,.95)}
+  .fbtn[aria-current="true"]{background:var(--ink-deep);color:#e7d5ae;border-color:var(--ink-deep);transform:translateX(-5px);
+    box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .fbtn:focus-visible{outline:2px solid var(--ink-deep);outline-offset:2px}
+
+  #bottom{left:0;right:0;bottom:0;padding:10px 10px calc(10px + env(safe-area-inset-bottom));
+    display:flex;gap:8px;align-items:flex-end;justify-content:space-between}
+  #seekwrap{position:relative;flex:0 1 300px;min-width:0}
+  #seek{width:100%;font-family:var(--ui);font-size:13px;color:var(--ink-deep);background:rgba(216,192,150,.9);
+    border:1px solid rgba(43,20,7,.5);padding:8px 10px;letter-spacing:.05em;box-shadow:inset 0 0 14px rgba(120,80,38,.3)}
+  #seek::placeholder{color:rgba(43,20,7,.5);font-style:italic;font-family:var(--prose)}
+  #seek:focus{outline:none;border-color:var(--ink-deep);background:rgba(231,213,176,.96)}
+  #hits{position:absolute;bottom:100%;left:0;right:0;margin-bottom:5px;max-height:46vh;overflow:auto;display:none}
+  #hits.on{display:block}
+  .hit{padding:6px 10px;font-size:12px;letter-spacing:.04em;cursor:pointer;border-bottom:1px solid rgba(43,20,7,.16);
+       display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+  .hit:last-child{border-bottom:0}
+  .hit:hover{background:rgba(43,20,7,.14)}
+  .hit em{font-family:var(--prose);font-size:10.5px;opacity:.72;font-style:italic;text-align:right;flex:0 0 auto}
+
+  #spell{font-family:var(--ui);font-size:clamp(9.5px,2.6vw,12px);letter-spacing:.09em;text-transform:uppercase;
+    padding:9px 12px;border:1px solid rgba(43,20,7,.5);background:rgba(216,192,150,.9);color:var(--ink-deep);cursor:pointer;
+    white-space:nowrap;box-shadow:inset 0 0 14px rgba(120,80,38,.3)}
+  #spell:hover{background:rgba(231,213,176,.97)}
+
+  #card{position:fixed;z-index:40;left:50%;bottom:64px;transform:translateX(-50%) translateY(8px);
+    width:min(340px,calc(100vw - 24px));padding:13px 15px 14px;display:none;opacity:0;transition:opacity .2s,transform .2s}
+  #card.on{display:block;opacity:1;transform:translateX(-50%) translateY(0)}
+  #card h3{margin:0;font-family:var(--title);font-weight:700;font-size:16px;letter-spacing:.09em;text-transform:uppercase;padding-right:18px}
+  #card .role{font-family:var(--prose);font-style:italic;font-size:12px;opacity:.8;margin:3px 0 8px}
+  #card .where{font-size:12.5px;letter-spacing:.04em;border-top:1px solid rgba(43,20,7,.3);padding-top:7px}
+  #card .fact{font-family:var(--prose);font-size:13px;line-height:1.5;margin:8px 0 0;opacity:.92}
+  #card .x{position:absolute;top:7px;right:10px;font-size:14px;cursor:pointer;opacity:.6;line-height:1}
+  #card .x:hover{opacity:1}
+
+  #toast{position:fixed;z-index:50;left:50%;top:20%;transform:translateX(-50%);width:min(400px,calc(100vw - 32px));
+    padding:16px 20px;text-align:center;display:none;opacity:0;transition:opacity .45s}
+  #toast.on{display:block;opacity:1}
+  #toast p{margin:0 0 7px;font-family:var(--prose);font-style:italic;font-size:14.5px;line-height:1.55}
+  #toast p:last-child{margin-bottom:0}
+  #toast b{font-family:var(--ui);font-style:normal;letter-spacing:.05em}
+
+  #intro{position:fixed;inset:0;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    gap:24px;padding:24px;text-align:center;background:radial-gradient(120% 90% at 50% 42%,#3a2412 0%,#1d1108 62%,#100903 100%);
+    transition:opacity .9s ease}
+  #intro.gone{opacity:0;pointer-events:none}
+  #introTitle{font-family:var(--title);font-weight:700;letter-spacing:.3em;text-transform:uppercase;
+    font-size:clamp(17px,5.6vw,34px);color:#c9a670;text-shadow:0 0 26px rgba(180,120,50,.4);margin:0}
+  #introSub{font-family:var(--prose);font-style:italic;color:#9d7c50;font-size:clamp(11px,3vw,14px);
+    letter-spacing:.06em;max-width:32ch;line-height:1.7;margin:0}
+  #swear{font-family:var(--prose);font-style:italic;font-size:clamp(13px,3.7vw,18px);color:#d8b071;
+    background:none;border:1px solid rgba(200,150,80,.42);padding:15px 24px;cursor:pointer;line-height:1.5;
+    max-width:26ch;transition:color .3s,border-color .3s,box-shadow .3s}
+  #swear:hover{color:#f2d8a4;border-color:rgba(230,190,120,.85);box-shadow:0 0 34px rgba(190,130,55,.28)}
+  #swear:focus-visible{outline:2px solid #d8b071;outline-offset:3px}
+  .quill{font-family:var(--ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7a5c39;margin:0}
+
+  @media (max-width:520px){
+    #card{bottom:60px}
+    #seekwrap{flex:1 1 auto}
+  }
+  @media (prefers-reduced-motion:reduce){
+    #intro,#card,#toast,.fbtn{transition:none}
+  }
+</style>
+
+<canvas id="map"></canvas>
+
+<div class="hud" id="topleft">
+  <div class="plate" id="brand">
+    <span class="sub">Moony, Wormtail, Padfoot &amp; Prongs present</span>
+    <span class="nm" id="brandName">The Marauder's Map</span>
+  </div>
+</div>
+
+<div class="hud" id="topright">
+  <div class="plate" id="clock"><span class="t" id="ctime">--:--</span><span class="d" id="cdate">&nbsp;</span></div>
+</div>
+
+<div class="hud" id="rail"></div>
+
+<div class="hud" id="bottom">
+  <div id="seekwrap">
+    <div class="plate" id="hits"></div>
+    <input id="seek" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Seek a name upon the map&hellip;">
+  </div>
+  <button class="plate" id="spell">Mischief Managed</button>
+</div>
+
+<div class="plate" id="card">
+  <span class="x" id="cardX">&#10005;</span>
+  <h3 id="cardName"></h3>
+  <div class="role" id="cardRole"></div>
+  <div class="where" id="cardWhere"></div>
+  <p class="fact" id="cardFact"></p>
+</div>
+
+<div class="plate" id="toast"></div>
+
+<div id="intro">
+  <p class="quill">Messrs Moony, Wormtail, Padfoot &amp; Prongs</p>
+  <h1 id="introTitle">The Marauder's Map</h1>
+  <p id="introSub">Purveyors of Aids to Magical Mischief-Makers are proud to present a complete plan of Hogwarts School of Witchcraft and Wizardry &mdash; and everybody presently walking about in it.</p>
+  <button id="swear">&ldquo;I solemnly swear that I am up to no good.&rdquo;</button>
+  <p class="quill">Tap to unfold the parchment</p>
+</div>
+
+<script>
+/* ================================================================
+   THE MARAUDER'S MAP  --  a living plan of Hogwarts Castle
+   ================================================================ */
+(function(){
+'use strict';
+
+/* ---------------- random ---------------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;var t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+var MRNG=mulberry32(1953);              // the castle is always drawn the same
+var RNG=mulberry32((Math.random()*1e9)|0); // the people are not
+function rr(a,b){return a+(b-a)*RNG();}
+function pick(a){return a[(RNG()*a.length)|0];}
+function chance(p){return RNG()<p;}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=(RNG()*(i+1))|0,t=a[i];a[i]=a[j];a[j]=t;}return a;}
+
+/* ---------------- floor plan builder ---------------- */
+var FLOORS=[], ROOM={}, F=null;
+function floor(id,name,short,w,h){F={id:id,name:name,short:short,w:w,h:h,rooms:[],links:[]};FLOORS.push(F);return F;}
+function R(id,name,x,y,w,h,o){
+  o=o||{};
+  var r={id:id,name:name,x:x,y:y,w:w,h:h,cx:x+w/2,cy:y+h/2,floor:F.id,
+         shape:o.shape||'rect',decor:o.decor||null,open:!!o.open,secret:!!o.secret,
+         maybe:o.maybe||0,note:o.note||null,tiny:!!o.tiny};
+  F.rooms.push(r);ROOM[id]=r;return r;
+}
+function L(a,b,m){F.links.push([a,b,m||'auto']);}
+
+/* ---------- THE GROUNDS ---------- */
+floor('grounds','The Grounds and the Lake','Grounds',2400,1600);
+R('forbidden-forest','The Forbidden Forest',70,150,540,780,{open:1,decor:'trees'});
+R('centaur-clearing',"The Centaurs' Clearing",300,230,230,150,{open:1,decor:'arrow'});
+R("aragogs-hollow","Aragog's Hollow",150,690,220,150,{open:1,decor:'web'});
+R('black-lake','The Black Lake',290,1070,650,440,{open:1,decor:'water'});
+R('whomping-willow','The Whomping Willow',740,300,210,200,{open:1,decor:'willow'});
+R('hagrid-hut',"Hagrid's Hut",700,620,220,190,{decor:'hut'});
+R('pumpkin-patch','The Pumpkin Patch',700,870,220,150,{open:1,decor:'pumpkins'});
+R('owlery','The Owlery',960,110,160,160,{shape:'round',decor:'owls'});
+R('training-grounds','The Training Grounds',1150,110,400,240,{open:1,decor:'targets'});
+R('quidditch-pitch','The Quidditch Pitch',1720,90,560,300,{open:1,decor:'pitch'});
+R('castle','Hogwarts Castle',1120,470,470,400,{decor:'castle'});
+R('greenhouses','The Greenhouses',1740,470,340,220,{decor:'plants'});
+R('stone-circle','The Stone Circle',1660,780,200,170,{open:1,decor:'stones'});
+R('entrance-courtyard','The Entrance Courtyard',1180,940,300,180,{open:1,decor:'flags'});
+R('clock-tower','The Clock Tower',1580,930,190,190,{shape:'round',decor:'clock'});
+R('covered-bridge','The Covered Bridge',930,1130,270,110,{decor:'bridge'});
+R('boathouse','The Boathouse',1010,1350,220,140,{decor:'boats'});
+R('viaduct','The Viaduct',1620,1190,330,110,{decor:'arches'});
+R('front-gates','The Front Gates',2110,910,190,150,{decor:'gates'});
+R('hogsmeade-road','The Road to Hogsmeade',2050,1160,310,140,{open:1,decor:'road'});
+R('shrieking-shack','The Shrieking Shack',2020,1390,320,170,{decor:'shack'});
+L('forbidden-forest','centaur-clearing');L('forbidden-forest','aragogs-hollow');
+L('forbidden-forest','hagrid-hut');L('hagrid-hut','pumpkin-patch');
+L('hagrid-hut','whomping-willow');L('whomping-willow','castle');
+L('hagrid-hut','covered-bridge');L('covered-bridge','black-lake');
+L('black-lake','boathouse');L('boathouse','entrance-courtyard');
+L('castle','entrance-courtyard');L('castle','owlery');L('castle','training-grounds');
+L('training-grounds','quidditch-pitch');L('quidditch-pitch','greenhouses');
+L('castle','greenhouses');L('greenhouses','stone-circle');L('stone-circle','clock-tower');
+L('entrance-courtyard','clock-tower');L('clock-tower','viaduct');
+L('viaduct','hogsmeade-road');L('hogsmeade-road','front-gates');L('front-gates','castle');
+L('hogsmeade-road','shrieking-shack');
+L('whomping-willow','shrieking-shack','secret');   /* the passage beneath the roots */
+
+/* ---------- THE DUNGEONS ---------- */
+floor('dungeons','The Dungeons','Dungeons',1700,1150);
+R('dungeon-stair','Stair to the Entrance Hall',740,60,220,150,{decor:'stairs'});
+R('dungeon-corridor','The Dungeon Corridor',680,290,340,150,{decor:'torches'});
+R('potions-classroom','Potions Classroom',290,290,330,220,{decor:'cauldrons'});
+R('snape-office',"Professor Snape's Office",300,580,270,180,{decor:'jars'});
+R('slytherin-common','Slytherin Common Room',250,830,350,220,{decor:'fire'});
+R('slytherin-dorms','Slytherin Dormitories',660,860,290,190,{decor:'beds'});
+R('crypt','The Old Crypt',680,530,340,170,{decor:'tombs'});
+R('kitchens','The Hogwarts Kitchens',1090,290,300,220,{decor:'kitchen'});
+R('hufflepuff-basement','Hufflepuff Common Room',1110,600,320,200,{decor:'fire'});
+R('hufflepuff-dorms','Hufflepuff Dormitories',1110,860,300,180,{decor:'beds'});
+R('storerooms','Potion Store Rooms',1470,300,180,170,{decor:'jars'});
+R('cellars','The Wine Cellars',70,300,180,170,{decor:'barrels'});
+L('dungeon-stair','dungeon-corridor');L('dungeon-corridor','potions-classroom');
+L('potions-classroom','snape-office');L('snape-office','slytherin-common');
+L('slytherin-common','slytherin-dorms');L('potions-classroom','cellars');
+L('dungeon-corridor','crypt');L('crypt','slytherin-dorms');L('crypt','hufflepuff-basement');
+L('dungeon-corridor','kitchens');L('kitchens','storerooms');
+L('kitchens','hufflepuff-basement');L('hufflepuff-basement','hufflepuff-dorms');
+
+/* ---------- GROUND FLOOR ---------- */
+floor('ground','The Ground Floor','Ground Fl.',1800,1200);
+R('viaduct-entrance','The Viaduct Entrance',760,190,280,150,{decor:'doors'});
+R('broom-cupboard','Broom Cupboard',540,200,150,130,{tiny:1,decor:'brooms'});
+R('greenhouse-door','Door to the Greenhouses',1420,190,230,150,{decor:'doors'});
+R('marble-staircase','The Marble Staircase',780,470,240,230,{decor:'stairs'});
+R('chamber-of-reception','Chamber of Reception',260,390,250,170);
+R('great-hall','The Great Hall',240,620,420,340,{decor:'tables'});
+R('entrance-hall','The Entrance Hall',760,750,280,200,{decor:'hourglass'});
+R('front-doors','The Great Oak Doors',790,1010,220,120,{decor:'doors'});
+R('hall-of-armour','Hall of Suits of Armour',1110,470,270,200,{decor:'armour'});
+R('classroom-eleven','Classroom Eleven',1440,440,220,190,{decor:'desks'});
+R('kitchen-stair','Stair to the Kitchens',1110,780,200,160,{decor:'stairs'});
+R("filch-office","Filch's Office",1400,780,240,170,{decor:'chains'});
+R('caretakers-corridor',"Caretaker's Corridor",1110,1000,350,120,{decor:'torches'});
+L('viaduct-entrance','marble-staircase');L('viaduct-entrance','broom-cupboard');
+L('marble-staircase','entrance-hall');L('marble-staircase','chamber-of-reception');
+L('chamber-of-reception','great-hall');L('great-hall','entrance-hall');
+L('entrance-hall','front-doors');L('marble-staircase','hall-of-armour');
+L('hall-of-armour','classroom-eleven');L('hall-of-armour','greenhouse-door');
+L('hall-of-armour','kitchen-stair');L('kitchen-stair','filch-office');
+L('kitchen-stair','caretakers-corridor');L('entrance-hall','kitchen-stair');
+
+/* ---------- FIRST FLOOR ---------- */
+floor('first','The First Floor','First Fl.',1800,1200);
+R('restricted-section','The Restricted Section',1160,210,300,200,{decor:'shelves'});
+R('pince-desk',"Madam Pince's Desk",1500,210,160,160,{tiny:1,decor:'desk'});
+R('hospital-wing','The Hospital Wing',250,230,420,250,{decor:'beds'});
+R('first-corridor','First-Floor Corridor',690,300,410,140,{decor:'torches'});
+R('grand-staircase-1','The Grand Staircase',780,500,240,230,{decor:'stairs'});
+R('transfiguration','Transfiguration Classroom',250,560,340,220,{decor:'desks'});
+R('mcgonagall-office',"Professor McGonagall's Office",250,840,290,190,{decor:'shelves'});
+R('library','The Library',1150,470,420,290,{decor:'shelves'});
+R('long-gallery','The Long Gallery',690,820,410,140,{decor:'portraits'});
+R('staff-room','The Staff Room',1150,830,300,200,{decor:'fire'});
+L('first-corridor','grand-staircase-1');L('first-corridor','hospital-wing');
+L('first-corridor','restricted-section');L('restricted-section','pince-desk');
+L('restricted-section','library');L('grand-staircase-1','library');
+L('grand-staircase-1','transfiguration');L('transfiguration','mcgonagall-office');
+L('grand-staircase-1','long-gallery');L('long-gallery','mcgonagall-office');
+L('long-gallery','staff-room');L('staff-room','library');
+
+/* ---------- SECOND FLOOR ---------- */
+floor('second','The Second Floor','Second Fl.',1800,1200);
+R("myrtles-bathroom","Moaning Myrtle's Bathroom",240,230,370,250,{decor:'sinks'});
+R('defence-office',"The Defence Master's Office",1150,210,290,200,{decor:'shelves'});
+R('second-corridor','Second-Floor Corridor',690,300,410,140,{decor:'torches'});
+R('chamber-entrance','Entrance to the Chamber of Secrets',240,540,300,190,{decor:'pipe',secret:1});
+R('grand-staircase-2','The Grand Staircase',780,500,240,230,{decor:'stairs'});
+R('defence-classroom','Defence Against the Dark Arts',1150,470,410,260,{decor:'desks'});
+R('charms-classroom','Charms Classroom',240,790,370,240,{decor:'desks'});
+R('portrait-gallery','The Portrait Gallery',690,820,410,140,{decor:'portraits'});
+R('muggle-studies','Muggle Studies',1150,800,300,200,{decor:'desks'});
+L('second-corridor','grand-staircase-2');L('second-corridor','myrtles-bathroom');
+L('myrtles-bathroom','chamber-entrance');L('second-corridor','defence-office');
+L('defence-office','defence-classroom');L('grand-staircase-2','defence-classroom');
+L('grand-staircase-2','chamber-entrance');L('grand-staircase-2','portrait-gallery');
+L('portrait-gallery','charms-classroom');L('portrait-gallery','muggle-studies');
+L('charms-classroom','chamber-entrance');
+
+/* ---------- THIRD FLOOR ---------- */
+floor('third','The Third Floor','Third Fl.',1800,1200);
+R('forbidden-corridor','The Forbidden Corridor',240,220,380,230,{decor:'paws'});
+R('history-classroom','History of Magic',1150,210,320,200,{decor:'desks'});
+R('third-corridor','Third-Floor Corridor',690,300,410,140,{decor:'torches'});
+R('trapdoor-room','The Trapdoor Chamber',250,510,250,170,{decor:'trapdoor',secret:1});
+R('grand-staircase-3','The Grand Staircase',780,500,240,230,{decor:'stairs'});
+R('trophy-room','The Trophy Room',1150,470,340,230,{decor:'trophies'});
+R('disused-classroom','A Disused Classroom',240,760,340,230,{decor:'mirror'});
+R('one-eyed-witch','The One-Eyed Witch',690,830,310,140,{decor:'statue',secret:1});
+R('armour-corridor','Corridor of Armour',1150,780,340,160,{decor:'armour'});
+L('third-corridor','grand-staircase-3');L('third-corridor','forbidden-corridor');
+L('forbidden-corridor','trapdoor-room');L('third-corridor','history-classroom');
+L('history-classroom','trophy-room');L('grand-staircase-3','trophy-room');
+L('grand-staircase-3','one-eyed-witch');L('one-eyed-witch','disused-classroom');
+L('disused-classroom','trapdoor-room');L('one-eyed-witch','armour-corridor');
+L('armour-corridor','trophy-room');
+
+/* ---------- FIFTH FLOOR ---------- */
+floor('fifth','The Fifth Floor','Fifth Fl.',1800,1200);
+R("prefects-bathroom","The Prefects' Bathroom",240,230,360,240,{decor:'bath'});
+R('ravenclaw-stair','Ravenclaw Tower Stair',1210,220,240,220,{shape:'round',decor:'spiral'});
+R('fifth-corridor','Fifth-Floor Corridor',690,300,410,140,{decor:'torches'});
+R('grand-staircase-5','The Grand Staircase',780,500,240,230,{decor:'stairs'});
+R('arithmancy','Arithmancy Classroom',240,560,300,210,{decor:'desks'});
+R('ravenclaw-common','Ravenclaw Common Room',1140,530,380,250,{shape:'round',decor:'fire'});
+R('ancient-runes','Study of Ancient Runes',240,850,300,200,{decor:'desks'});
+R('tapestry-corridor','The Tapestry Corridor',690,830,410,140,{decor:'tapestry'});
+R('ravenclaw-dorms','Ravenclaw Dormitories',1180,860,300,190,{decor:'beds'});
+L('fifth-corridor','grand-staircase-5');L('fifth-corridor','prefects-bathroom');
+L('fifth-corridor','ravenclaw-stair');L('ravenclaw-stair','ravenclaw-common');
+L('grand-staircase-5','ravenclaw-common');L('grand-staircase-5','arithmancy');
+L('arithmancy','ancient-runes');L('grand-staircase-5','tapestry-corridor');
+L('tapestry-corridor','ancient-runes');L('tapestry-corridor','ravenclaw-dorms');
+L('ravenclaw-common','ravenclaw-dorms');
+
+/* ---------- SEVENTH FLOOR &amp; THE TOWERS ---------- */
+floor('seventh','The Seventh Floor and Towers','Towers',1800,1260);
+R('room-of-requirement','The Room of Requirement',230,70,390,240,{decor:'junk',maybe:.55});
+R("headmasters-office","The Headmaster's Office",700,80,300,230,{shape:'round',decor:'pensieve'});
+R('gargoyle','The Stone Gargoyle',1150,120,240,160,{decor:'gargoyle'});
+R('barnabas-tapestry','Barnabas the Barmy',250,370,320,150,{decor:'tapestry'});
+R('seventh-corridor','Seventh-Floor Corridor',650,370,510,140,{decor:'torches'});
+R('fat-lady',"The Fat Lady's Portrait",1230,370,250,140,{decor:'portraits'});
+R('grand-staircase-7','The Grand Staircase',780,570,240,220,{decor:'stairs'});
+R('gryffindor-common','Gryffindor Common Room',1170,560,390,250,{decor:'fire'});
+R('north-tower','North Tower: Divination',250,690,300,240,{shape:'round',decor:'crystal'});
+R('gryffindor-boys',"Boys' Dormitory",1170,860,250,190,{decor:'beds'});
+R('gryffindor-girls',"Girls' Dormitory",1470,860,240,190,{decor:'beds'});
+R('astronomy-tower','The Astronomy Tower',250,1000,320,200,{shape:'round',decor:'telescope'});
+R('west-tower','The West Tower',640,1010,240,190,{shape:'round',decor:'bells'});
+L('seventh-corridor','grand-staircase-7');L('seventh-corridor','barnabas-tapestry');
+L('barnabas-tapestry','room-of-requirement');L('seventh-corridor','gargoyle');
+L('gargoyle','headmasters-office');L('seventh-corridor','fat-lady');
+L('fat-lady','gryffindor-common');L('gryffindor-common','gryffindor-boys');
+L('gryffindor-common','gryffindor-girls');L('grand-staircase-7','gryffindor-common');
+L('grand-staircase-7','north-tower');L('north-tower','astronomy-tower');
+L('astronomy-tower','west-tower');L('west-tower','grand-staircase-7');
+L('north-tower','barnabas-tapestry');
+
+/* ---------- the stairs that join the levels ---------- */
+var STAIRS=[
+  ['entrance-courtyard','front-doors'],
+  ['castle','viaduct-entrance'],
+  ['entrance-hall','dungeon-stair'],
+  ['kitchen-stair','dungeon-stair'],
+  ['marble-staircase','grand-staircase-1'],
+  ['grand-staircase-1','grand-staircase-2'],
+  ['grand-staircase-2','grand-staircase-3'],
+  ['grand-staircase-3','grand-staircase-5'],
+  ['grand-staircase-5','grand-staircase-7'],
+  ['one-eyed-witch','hogsmeade-road','secret']   /* the humpbacked witch to Honeydukes' cellar */
+];
+
+/* ================================================================
+   WHO IS IN THE CASTLE, AND WHERE THEY ARE LIKELY TO BE
+   ================================================================ */
+var HOUSE={
+ gryffindor:{n:'Gryffindor',common:'gryffindor-common',m:'gryffindor-boys',f:'gryffindor-girls'},
+ slytherin :{n:'Slytherin', common:'slytherin-common', m:'slytherin-dorms', f:'slytherin-dorms'},
+ ravenclaw :{n:'Ravenclaw', common:'ravenclaw-common', m:'ravenclaw-dorms', f:'ravenclaw-dorms'},
+ hufflepuff:{n:'Hufflepuff',common:'hufflepuff-basement',m:'hufflepuff-dorms',f:'hufflepuff-dorms'}
+};
+var CORE=['potions-classroom','transfiguration','charms-classroom','defence-classroom',
+          'history-classroom','greenhouses','hagrid-hut','classroom-eleven'];
+var CORRIDORS=['marble-staircase','first-corridor','second-corridor','third-corridor','fifth-corridor',
+  'seventh-corridor','entrance-hall','long-gallery','portrait-gallery','armour-corridor','hall-of-armour',
+  'tapestry-corridor','grand-staircase-1','grand-staircase-2','grand-staircase-3','grand-staircase-5',
+  'caretakers-corridor','dungeon-corridor','viaduct-entrance'];
+var GROUNDSPOTS=['entrance-courtyard','black-lake','covered-bridge','stone-circle','boathouse',
+  'quidditch-pitch','viaduct','clock-tower','training-grounds'];
+
+var CHARS=[];
+function C(o){
+  o.kind=o.kind||'student';
+  o.step=o.step||'human';
+  o.speed=o.speed||(38+Math.random()*16);
+  o.odds=(o.odds===undefined)?1:o.odds;
+  CHARS.push(o);return o;
+}
+/* students */
+function S(id,name,house,sex,year,o){
+  o=o||{};o.id=id;o.name=name;o.house=house;o.sex=sex;o.year=year;o.kind='student';
+  o.role=o.role||(HOUSE[house].n+', '+['First','Second','Third','Fourth','Fifth','Sixth','Seventh'][year-1]+' Year');
+  o.classes=o.classes||CORE;
+  return C(o);
+}
+/* staff */
+function T(id,name,role,base,teach,o){
+  o=o||{};o.id=id;o.name=name;o.role=role;o.base=base;o.teach=teach;o.kind=o.kind||'staff';
+  return C(o);
+}
+/* everything else */
+function G(id,name,role,kind,haunts,o){
+  o=o||{};o.id=id;o.name=name;o.role=role;o.kind=kind;o.roam=haunts;
+  return C(o);
+}
+
+/* ---------------- GRYFFINDOR ---------------- */
+S('harry-potter','Harry Potter','gryffindor','m',5,{
+  free:['room-of-requirement','quidditch-pitch','one-eyed-witch','hagrid-hut','gryffindor-common'],
+  fact:'Marked as his equal. Carries the map, and rather more besides.'});
+S('ron-weasley','Ron Weasley','gryffindor','m',5,{
+  free:['gryffindor-common','kitchens','quidditch-pitch','great-hall','hagrid-hut'],
+  fact:'Will follow Harry anywhere, provided there is food at the other end.'});
+S('hermione-granger','Hermione Granger','gryffindor','f',5,{
+  free:['library','restricted-section','gryffindor-common','hagrid-hut'],
+  study:.7,fact:'Books and cleverness. There are more important things, she says, but not many.'});
+S('neville-longbottom','Neville Longbottom','gryffindor','m',5,{
+  free:['greenhouses','gryffindor-common','room-of-requirement'],
+  fact:'Best in the year at Herbology. Has misplaced Trevor again.'});
+S('ginny-weasley','Ginny Weasley','gryffindor','f',4,{
+  free:['quidditch-pitch','gryffindor-common','black-lake','room-of-requirement'],
+  fact:'A truly exceptional Bat-Bogey Hex.'});
+S('fred-weasley','Fred Weasley','gryffindor','m',7,{
+  free:['one-eyed-witch','room-of-requirement','gryffindor-common','kitchens','filch-office'],
+  fact:'Knows every secret passage out of this castle. There are seven.'});
+S('george-weasley','George Weasley','gryffindor','m',7,{
+  free:['one-eyed-witch','room-of-requirement','gryffindor-common','kitchens','caretakers-corridor'],
+  fact:'Knows every secret passage out of this castle. Filch knows four.'});
+S('lee-jordan','Lee Jordan','gryffindor','m',7,{free:['gryffindor-common','quidditch-pitch','great-hall'],
+  fact:'Commentates on Quidditch with an admirable lack of impartiality.'});
+S('seamus-finnigan','Seamus Finnigan','gryffindor','m',5,{free:['gryffindor-common','great-hall','black-lake'],
+  fact:'His feather, uniquely, exploded.'});
+S('dean-thomas','Dean Thomas','gryffindor','m',5,{free:['gryffindor-common','quidditch-pitch','entrance-courtyard'],
+  fact:'Supports West Ham. Nobody in the tower understands why.'});
+S('lavender-brown','Lavender Brown','gryffindor','f',5,{free:['gryffindor-common','north-tower','great-hall'],
+  fact:'Devoted to Divination and to Won-Won, in that order. Briefly.'});
+S('parvati-patil','Parvati Patil','gryffindor','f',5,{free:['gryffindor-common','north-tower','long-gallery'],
+  fact:'Her twin is in Ravenclaw, which she considers a filing error.'});
+S('percy-weasley','Percy Weasley','gryffindor','m',7,{
+  free:['library','prefects-bathroom','gryffindor-common','long-gallery'],
+  role:'Gryffindor, Head Boy',fact:'Has memorised the school rules. All of them. Twice.'});
+S('oliver-wood','Oliver Wood','gryffindor','m',7,{free:['quidditch-pitch','quidditch-pitch','training-grounds'],
+  fact:'Booked the pitch for dawn. Again.'});
+S('katie-bell','Katie Bell','gryffindor','f',6,{free:['quidditch-pitch','gryffindor-common','entrance-courtyard'],
+  fact:'Chaser. Rather good in the air, rather quiet on the ground.'});
+S('angelina-johnson','Angelina Johnson','gryffindor','f',7,{free:['quidditch-pitch','gryffindor-common'],
+  fact:'Captain. Runs a practice like Wood, only louder.'});
+S('alicia-spinnet','Alicia Spinnet','gryffindor','f',6,{free:['quidditch-pitch','gryffindor-common','black-lake'],
+  fact:'Third of the Chasers. Never once dropped the Quaffle in a final.'});
+S('colin-creevey','Colin Creevey','gryffindor','m',4,{free:['gryffindor-common','great-hall','entrance-courtyard'],
+  fact:'Camera at the ready, in case Harry does something.'});
+S('dennis-creevey','Dennis Creevey','gryffindor','m',2,{free:['gryffindor-common','black-lake','entrance-courtyard'],
+  fact:'Fell in the lake. Says the giant squid put him back in the boat.'});
+S('romilda-vane','Romilda Vane','gryffindor','f',4,{free:['gryffindor-common','great-hall','long-gallery'],
+  fact:'Carries chocolate cauldrons. Do not accept one.'});
+
+/* ---------------- SLYTHERIN ---------------- */
+S('draco-malfoy','Draco Malfoy','slytherin','m',5,{
+  free:['slytherin-common','room-of-requirement','prefects-bathroom','myrtles-bathroom','snape-office'],
+  fact:'Wait until my father hears about this.'});
+S('vincent-crabbe','Vincent Crabbe','slytherin','m',5,{free:['slytherin-common','great-hall','kitchens'],
+  fact:'Follows Malfoy at a distance of precisely one pace.'});
+S('gregory-goyle','Gregory Goyle','slytherin','m',5,{free:['slytherin-common','great-hall','dungeon-corridor'],
+  fact:'The other pace.'});
+S('pansy-parkinson','Pansy Parkinson','slytherin','f',5,{free:['slytherin-common','great-hall','portrait-gallery'],
+  fact:'Laughs loudest at Malfoy jokes, whether or not they are jokes.'});
+S('blaise-zabini','Blaise Zabini','slytherin','m',5,{free:['slytherin-common','library','great-hall'],
+  fact:'Regards nearly everyone as beneath him, and says so seldom.'});
+S('theodore-nott','Theodore Nott','slytherin','m',5,{free:['library','slytherin-common','restricted-section'],
+  fact:'Clever, solitary, and quite unimpressed by Malfoy.'});
+S('millicent-bulstrode','Millicent Bulstrode','slytherin','f',5,{free:['slytherin-common','dungeon-corridor'],
+  fact:'Duelling Club, second year. Hermione still recalls the headlock.'});
+S('marcus-flint','Marcus Flint','slytherin','m',7,{free:['quidditch-pitch','slytherin-common','training-grounds'],
+  fact:'Slytherin Captain. Fouls creatively.'});
+S('adrian-pucey','Adrian Pucey','slytherin','m',6,{free:['quidditch-pitch','slytherin-common'],
+  fact:'Chaser, and the only Slytherin on the team who plays fair.'});
+
+/* ---------------- RAVENCLAW ---------------- */
+S('luna-lovegood','Luna Lovegood','ravenclaw','f',4,{
+  free:['forbidden-forest','black-lake','ravenclaw-common','room-of-requirement','astronomy-tower','owlery'],
+  fact:'Looking for her shoes. They will come back; things always do.'});
+S('cho-chang','Cho Chang','ravenclaw','f',6,{free:['ravenclaw-common','quidditch-pitch','library','black-lake'],
+  fact:'Seeker. Beat Harry once, and has never been allowed to forget it.'});
+S('padma-patil','Padma Patil','ravenclaw','f',5,{free:['library','ravenclaw-common','arithmancy'],
+  fact:'The sensible twin, by her own account.'});
+S('terry-boot','Terry Boot','ravenclaw','m',5,{free:['library','ravenclaw-common','room-of-requirement'],
+  fact:'Asked, in first year, whether the Sorting Hat could be argued with.'});
+S('michael-corner','Michael Corner','ravenclaw','m',5,{free:['ravenclaw-common','library','portrait-gallery'],
+  fact:'Dated a Weasley. Regretted the Bat-Bogey Hex.'});
+S('anthony-goldstein','Anthony Goldstein','ravenclaw','m',5,{free:['library','ravenclaw-common','ancient-runes'],
+  role:'Ravenclaw Prefect, Fifth Year',fact:'Prefect. Takes the rounds seriously, unlike some.'});
+
+/* ---------------- HUFFLEPUFF ---------------- */
+S('cedric-diggory','Cedric Diggory','hufflepuff','m',6,{
+  free:['quidditch-pitch','prefects-bathroom','hufflepuff-basement','black-lake'],
+  role:'Hufflepuff, Captain and Prefect',fact:'Fair, modest, and unfairly good at everything.'});
+S('hannah-abbott','Hannah Abbott','hufflepuff','f',5,{free:['hufflepuff-basement','greenhouses','great-hall'],
+  fact:'Fainted in Herbology once. The mandrakes were at fault.'});
+S('ernie-macmillan','Ernie Macmillan','hufflepuff','m',5,{free:['hufflepuff-basement','library','long-gallery'],
+  fact:'Speaks in pronouncements. Means every one of them.'});
+S('justin-finch-fletchley','Justin Finch-Fletchley','hufflepuff','m',5,{free:['hufflepuff-basement','library','great-hall'],
+  fact:'Was down for Eton. Chose snakes and stone corridors instead.'});
+S('susan-bones','Susan Bones','hufflepuff','f',5,{free:['hufflepuff-basement','greenhouses','entrance-courtyard'],
+  fact:'Her aunt is Head of Magical Law Enforcement. She rarely mentions it.'});
+S('zacharias-smith','Zacharias Smith','hufflepuff','m',5,{free:['hufflepuff-basement','great-hall','quidditch-pitch'],
+  fact:'Wants proof. Of everything. Loudly.'});
+
+/* ---------------- STAFF ---------------- */
+T('albus-dumbledore','Albus Dumbledore','Headmaster',"headmasters-office",'great-hall',{
+  free:['astronomy-tower','great-hall','grand-staircase-7','front-gates'],
+  sleep:'headmasters-office',speed:34,
+  fact:'Enjoys chamber music and tenpin bowling. Not, as a rule, at once.'});
+T('minerva-mcgonagall','Minerva McGonagall','Deputy Headmistress, Transfiguration','mcgonagall-office','transfiguration',{
+  free:['staff-room','gryffindor-common','long-gallery','quidditch-pitch'],
+  fact:'Head of Gryffindor. Has been known to smile. Witnesses disagree.'});
+T('severus-snape','Severus Snape','Potions Master','snape-office','potions-classroom',{
+  free:['storerooms','dungeon-corridor','caretakers-corridor','forbidden-forest','crypt'],
+  patrol:1,speed:46,
+  fact:'Bottle fame, brew glory, even stopper death. Or waste his time entirely.'});
+T('filius-flitwick','Filius Flitwick','Charms Master','charms-classroom','charms-classroom',{
+  free:['staff-room','great-hall','portrait-gallery'],
+  fact:'Head of Ravenclaw. Duelling champion, once, and it shows.'});
+T('pomona-sprout','Pomona Sprout','Herbology Mistress','greenhouses','greenhouses',{
+  free:['greenhouses','staff-room','pumpkin-patch','hagrid-hut'],
+  fact:'Head of Hufflepuff. Earmuffs are not optional.'});
+T('rubeus-hagrid','Rubeus Hagrid','Keeper of Keys and Grounds','hagrid-hut','hagrid-hut',{
+  free:['forbidden-forest','pumpkin-patch','black-lake','training-grounds','aragogs-hollow'],
+  sleep:'hagrid-hut',speed:44,step:'huge',
+  fact:"I shouldn't have said that. I should not have said that."});
+T('sybill-trelawney','Sybill Trelawney','Divination','north-tower','north-tower',{
+  free:['north-tower','cellars','astronomy-tower'],sleep:'north-tower',
+  fact:'Foresees a dark and difficult year. Every year.'});
+T('rolanda-hooch','Rolanda Hooch','Flying Instructor and Referee','training-grounds','training-grounds',{
+  free:['quidditch-pitch','training-grounds','staff-room'],
+  fact:'Up, straight away, and no larking about.'});
+T('irma-pince','Irma Pince','Librarian','library','library',{
+  free:['restricted-section','library','pince-desk'],sleep:'library',
+  fact:'The Restricted Section requires a signed note. She checks the signature.'});
+T('poppy-pomfrey','Poppy Pomfrey','Matron','hospital-wing','hospital-wing',{
+  free:['hospital-wing','staff-room'],sleep:'hospital-wing',
+  fact:'Can regrow every bone in an arm overnight. It is not pleasant.'});
+T('argus-filch','Argus Filch','Caretaker','filch-office','caretakers-corridor',{
+  free:['caretakers-corridor','kitchen-stair','armour-corridor','trophy-room','one-eyed-witch'],
+  patrol:1,sleep:'filch-office',speed:33,
+  fact:'Keeps a drawer marked Confiscated and Highly Dangerous. It is full.'});
+T('horace-slughorn','Horace Slughorn','Potions, and Collector of People','storerooms','potions-classroom',{
+  free:['staff-room','great-hall','cellars','slytherin-common'],speed:33,
+  fact:'Would very much like you to come to a small supper party.'});
+T('remus-lupin','Remus Lupin','Defence Against the Dark Arts','defence-office','defence-classroom',{
+  free:['staff-room','black-lake','defence-office','covered-bridge'],
+  fact:'One of the four who made this map. Moony, if you please.'});
+T('aurora-sinistra','Aurora Sinistra','Astronomy','astronomy-tower','astronomy-tower',{
+  free:['astronomy-tower','staff-room'],sleep:'astronomy-tower',night:1,
+  fact:'Teaches at midnight, which she considers perfectly reasonable.'});
+T('septima-vector','Septima Vector','Arithmancy','arithmancy','arithmancy',{
+  free:['staff-room','library'],fact:'The most demanding subject in the school, Hermione says approvingly.'});
+T('bathsheda-babbling','Bathsheda Babbling','Study of Ancient Runes','ancient-runes','ancient-runes',{
+  free:['library','staff-room'],fact:"Can read Spellman's Syllabary upside down."});
+T('cuthbert-binns','Cuthbert Binns','History of Magic','history-classroom','history-classroom',{
+  free:['history-classroom'],sleep:'history-classroom',kind:'ghost',step:'ghost',speed:22,
+  fact:'Died in the staff room and got up to teach. Has not stopped since.'});
+T('firenze','Firenze','Divination, and Centaur','centaur-clearing','forbidden-forest',{
+  free:['forbidden-forest','centaur-clearing','training-grounds'],step:'hoof',speed:52,
+  fact:'Mars is bright tonight.'});
+
+/* ---------------- GHOSTS ---------------- */
+G('nearly-headless-nick','Nearly Headless Nick','Ghost of Gryffindor Tower','ghost',
+  ['gryffindor-common','long-gallery','great-hall','grand-staircase-7','seventh-corridor'],
+  {step:'ghost',speed:26,fact:'Forty-five blows with a blunt axe. Nearly is the operative word.'});
+G('bloody-baron','The Bloody Baron','Ghost of Slytherin','ghost',
+  ['dungeon-corridor','slytherin-common','crypt','cellars','potions-classroom'],
+  {step:'ghost',speed:24,fact:'The only thing Peeves is afraid of. Nobody asks him why.'});
+G('grey-lady','The Grey Lady','Ghost of Ravenclaw','ghost',
+  ['ravenclaw-common','ravenclaw-stair','fifth-corridor','tapestry-corridor'],
+  {step:'ghost',speed:22,fact:'Helena Ravenclaw. Ask her about the diadem, if you dare.'});
+G('fat-friar','The Fat Friar','Ghost of Hufflepuff','ghost',
+  ['hufflepuff-basement','kitchens','dungeon-corridor','great-hall'],
+  {step:'ghost',speed:24,fact:'Forgive and forget, he says. He never learned the second part.'});
+G('moaning-myrtle','Moaning Myrtle','Ghost, Second-Floor Bathroom','ghost',
+  ['myrtles-bathroom','myrtles-bathroom','chamber-entrance','prefects-bathroom'],
+  {step:'ghost',speed:26,fact:'Died in a bathroom stall. Has haunted it ever since, and the pipes besides.'});
+G('peeves','Peeves','Poltergeist','ghost',CORRIDORS.concat(['trophy-room','great-hall','hall-of-armour','kitchens']),
+  {step:'ghost',speed:78,chaos:1,fact:'Not a ghost. A poltergeist. There is a difference, and you will find out.'});
+G('sir-cadogan','Sir Cadogan','Portrait, and Occasional Guard','portrait',
+  ['portrait-gallery','long-gallery','armour-corridor','tapestry-corridor'],
+  {step:'hoof',speed:60,fact:'Have at you, you dogs! Come back and fight, you mangy scoundrel!'});
+G('fat-lady','The Fat Lady','Portrait, Gryffindor Tower','portrait',['fat-lady'],
+  {still:1,step:'none',fact:"Password, please. No, that was last week's."});
+
+/* ---------------- BEASTS, ELVES, AND OTHERS ---------------- */
+G('mrs-norris','Mrs Norris','Cat, and Informant','cat',
+  ['caretakers-corridor','armour-corridor','trophy-room','entrance-hall','marble-staircase','one-eyed-witch',
+   'long-gallery','portrait-gallery','filch-office'],
+  {step:'paw',speed:40,fact:'Whatever she sees, he knows within the minute.'});
+G('crookshanks','Crookshanks','Cat, mostly','cat',
+  ['gryffindor-common','gryffindor-girls','seventh-corridor','black-lake','whomping-willow','entrance-courtyard'],
+  {step:'paw',speed:36,fact:'Part Kneazle. Knew about Scabbers long before anybody else did.'});
+G('fang','Fang','Boarhound','dog',['hagrid-hut','pumpkin-patch','forbidden-forest','black-lake'],
+  {step:'paw',speed:42,fact:'Bloody great coward.'});
+G('trevor','Trevor','Toad, lost again','toad',
+  ['great-hall','marble-staircase','entrance-hall','long-gallery','black-lake','greenhouses','kitchens',
+   'library','hospital-wing','charms-classroom','boathouse','potions-classroom'],
+  {step:'tiny',speed:16,wanderOnly:1,fact:'Property of N. Longbottom. Has never once stayed put.'});
+G('dobby','Dobby','House-elf, and a free one','elf',['kitchens','hufflepuff-basement','room-of-requirement','storerooms'],
+  {step:'tiny',speed:56,odds:.55,fact:'Dobby has no master. Dobby is a free elf.'});
+G('winky','Winky','House-elf','elf',['kitchens','storerooms','cellars'],
+  {step:'tiny',speed:44,odds:.4,fact:'Not coping well. There is butterbeer involved.'});
+G('kreacher','Kreacher','House-elf','elf',['kitchens','crypt','slytherin-common'],
+  {step:'tiny',speed:40,odds:.2,fact:'Muttering. Always muttering.'});
+G('fawkes','Fawkes','Phoenix','bird',['headmasters-office','gargoyle','astronomy-tower'],
+  {step:'bird',speed:50,odds:.6,fact:'Burning day is overdue. Stand well back.'});
+G('buckbeak','Buckbeak','Hippogriff','beast',['pumpkin-patch','hagrid-hut','forbidden-forest','training-grounds'],
+  {step:'claw',speed:44,odds:.65,fact:'Bow first. Do not blink. Never insult him.'});
+G('aragog','Aragog','Acromantula','spider',["aragogs-hollow",'forbidden-forest'],
+  {step:'spider',speed:34,odds:.35,fact:'Hagrid raised him in a cupboard. His children are less sentimental.'});
+G('grawp','Grawp','Giant, and a small one','giant',['forbidden-forest','centaur-clearing'],
+  {step:'huge',speed:30,odds:.25,fact:'HAGGER! Answers to it, eventually.'});
+G('bane','Bane','Centaur','beast',['forbidden-forest','centaur-clearing'],
+  {step:'hoof',speed:50,odds:.5,fact:'Resents having his forest walked through by humans.'});
+G('the-giant-squid','The Giant Squid','Resident of the Lake','beast',['black-lake'],
+  {step:'none',speed:20,fact:'Perfectly friendly. Occasionally returns a dropped first year.'});
+G('fluffy','Fluffy','Three-headed Dog','dog',['forbidden-corridor'],
+  {step:'paw',speed:20,odds:.4,fact:'A bit of music and he falls straight asleep.'});
+G('norberta','Norberta','Norwegian Ridgeback','beast',['forbidden-forest','hagrid-hut'],
+  {step:'claw',speed:46,odds:.12,fact:'She was a baby once. Hagrid has photographs.'});
+
+/* ---------------- THE ONES YOU ARE NOT MEANT TO SEE ---------------- */
+G('peter-pettigrew','Peter Pettigrew','?','rat',
+  ['gryffindor-boys','gryffindor-common','seventh-corridor','one-eyed-witch','kitchens'],
+  {step:'tiny',speed:52,odds:.14,secret:1,
+   fact:'He is supposed to be dead. The map does not lie, and the map does not care what you were told.'});
+G('sirius-black','Padfoot','Large Black Dog','dog',
+  ['forbidden-forest','whomping-willow','shrieking-shack','hogsmeade-road','black-lake'],
+  {step:'paw',speed:60,odds:.2,secret:1,nocturnal:1,
+   fact:'Padfoot. Also on the map, and also on every wanted poster in Britain.'});
+G('tom-riddle','Tom Riddle','A Memory','ghost',['chamber-entrance','myrtles-bathroom'],
+  {step:'ghost',speed:30,odds:.07,secret:1,
+   fact:'Sixteen years old, and preserved in a diary for fifty. Do not write back.'});
+G('nagini','Nagini','Serpent','snake',['forbidden-forest',"aragogs-hollow"],
+  {step:'slither',speed:44,odds:.05,secret:1,fact:'Not a resident. Not welcome. Here all the same.'});
+G('nicolas-flamel','Nicolas Flamel','Alchemist, aged 665','human',['front-gates','headmasters-office'],
+  {step:'human',speed:26,odds:.05,secret:1,fact:'To the well-organised mind, death is but the next great adventure.'});
+G('barty-crouch-jr','Bartemius Crouch Jr','?','human',['defence-office','training-grounds','forbidden-forest'],
+  {step:'human',speed:50,odds:.06,secret:1,fact:'The map showed him once. Nobody believed it then, either.'});
+G('regulus-black','R.A.B.','A Name on the Map','ghost',['slytherin-common','crypt'],
+  {step:'ghost',speed:28,odds:.04,secret:1,fact:'I face death in the hope that when you meet your match you will be mortal once more.'});
+
+/* ================================================================
+   THE CORRIDORS AS A GRAPH, AND THE WALKING OF THEM
+   ================================================================ */
+var NODE={};
+
+FLOORS.forEach(function(f){
+  f.rooms.forEach(function(r){ r.present = !r.maybe || RNG()<r.maybe; });
+});
+
+function edgeExit(r,tx,ty){
+  var dx=tx-r.cx, dy=ty-r.cy, hw=r.w/2, hh=r.h/2, t;
+  if(r.shape==='round'){
+    var a=(dx*dx)/(hw*hw)+(dy*dy)/(hh*hh);
+    t=a>0?1/Math.sqrt(a):0;
+  }else{
+    t=Infinity;
+    if(dx!==0){var t1=hw/Math.abs(dx); t=Math.min(t,t1);}
+    if(dy!==0){var t2=hh/Math.abs(dy); t=Math.min(t,t2);}
+    if(!isFinite(t)) t=0;
+  }
+  return {x:r.cx+dx*t, y:r.cy+dy*t};
+}
+function insideAny(f,x,y,a,b){
+  for(var i=0;i<f.rooms.length;i++){
+    var r=f.rooms[i];
+    if(r===a||r===b||!r.present||r.open) continue;
+    if(x>r.x-8&&x<r.x+r.w+8&&y>r.y-8&&y<r.y+r.h+8) return true;
+  }
+  return false;
+}
+function corridorPts(f,A,B){
+  var dx=B.cx-A.cx, dy=B.cy-A.cy, mid=null;
+  if(Math.abs(dx)>22 && Math.abs(dy)>22){
+    var c1={x:B.cx,y:A.cy}, c2={x:A.cx,y:B.cy};
+    var ok1=!insideAny(f,c1.x,c1.y,A,B), ok2=!insideAny(f,c2.x,c2.y,A,B);
+    if(ok1&&ok2) mid=(Math.abs(dx)>Math.abs(dy))?c1:c2;
+    else if(ok1) mid=c1; else if(ok2) mid=c2;
+  }
+  var toward=mid||{x:B.cx,y:B.cy};
+  var p0=edgeExit(A,toward.x,toward.y);
+  var from=mid||{x:A.cx,y:A.cy};
+  var p1=edgeExit(B,from.x,from.y);
+  return mid?[p0,mid,p1]:[p0,p1];
+}
+function plen(p){var d=0;for(var i=1;i<p.length;i++)d+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);return d;}
+function node(id){ return NODE[id]||(NODE[id]={id:id,room:ROOM[id],edges:[]}); }
+
+FLOORS.forEach(function(f){
+  f.wires=[];
+  f.links.forEach(function(lk){
+    var A=ROOM[lk[0]], B=ROOM[lk[1]];
+    if(!A||!B||!A.present||!B.present) return;
+    var pts=corridorPts(f,A,B);
+    f.wires.push({pts:pts,mode:lk[2],a:A,b:B});
+    var walk=[{x:A.cx,y:A.cy}].concat(pts).concat([{x:B.cx,y:B.cy}]);
+    walk.forEach(function(p){p.floor=f.id;});
+    var w=plen(walk)*(lk[2]==='secret'?2.2:1);
+    node(A.id).edges.push({to:B.id,w:w,pts:walk});
+    node(B.id).edges.push({to:A.id,w:w,pts:walk.slice().reverse()});
+  });
+});
+STAIRS.forEach(function(s){
+  var A=ROOM[s[0]], B=ROOM[s[1]];
+  if(!A||!B) return;
+  var w=(s[2]==='secret')?900:150;
+  node(A.id).edges.push({to:B.id,w:w,stair:1,pts:[{x:B.cx,y:B.cy,floor:B.floor,jump:1}]});
+  node(B.id).edges.push({to:A.id,w:w,stair:1,pts:[{x:A.cx,y:A.cy,floor:A.floor,jump:1}]});
+});
+
+/* ---------------- shortest path ---------------- */
+var pathCache={};
+function route(from,to){
+  if(from===to) return [];
+  var ck=from+'>'+to;
+  if(pathCache[ck]) return pathCache[ck];
+  var dist={},prev={},seen={},q=[from];
+  dist[from]=0;
+  while(q.length){
+    var best=-1,bd=Infinity;
+    for(var i=0;i<q.length;i++){ if(dist[q[i]]<bd){bd=dist[q[i]];best=i;} }
+    var cur=q.splice(best,1)[0];
+    if(seen[cur]) continue;
+    seen[cur]=1;
+    if(cur===to) break;
+    var n=NODE[cur]; if(!n) continue;
+    for(var e=0;e<n.edges.length;e++){
+      var ed=n.edges[e], nd=bd+ed.w;
+      if(dist[ed.to]===undefined||nd<dist[ed.to]){ dist[ed.to]=nd; prev[ed.to]=cur; q.push(ed.to); }
+    }
+  }
+  if(dist[to]===undefined){ pathCache[ck]=null; return null; }
+  var chain=[to],c=to;
+  while(prev[c]!==undefined){ c=prev[c]; chain.unshift(c); }
+  var wps=[];
+  for(var k=1;k<chain.length;k++){
+    var nn=NODE[chain[k-1]],ed2=null;
+    for(var j=0;j<nn.edges.length;j++) if(nn.edges[j].to===chain[k]){ed2=nn.edges[j];break;}
+    if(!ed2) continue;
+    var seg=ed2.stair?ed2.pts:ed2.pts.slice(1);
+    for(var m=0;m<seg.length;m++) wps.push(seg[m]);
+  }
+  pathCache[ck]=wps;
+  return wps;
+}
+
+/* ================================================================
+   TIMETABLES
+   ================================================================ */
+function moonPhase(d){
+  var lp=2551443, now=d.getTime()/1000,
+      nw=new Date(1970,0,7,20,35,0).getTime()/1000,
+      ph=((now-nw)%lp)/lp;
+  return ph; /* 0 = new, .5 = full */
+}
+var NOW=new Date(), FULLMOON=Math.abs(moonPhase(NOW)-0.5)<0.045;
+
+/* the castle keeps Central Time, whatever the reader's clock says */
+var CTF=null;
+try{
+  CTF=new Intl.DateTimeFormat('en-US',{timeZone:'America/Chicago',hour12:false,
+    weekday:'short',month:'short',day:'numeric',hour:'2-digit',minute:'2-digit',second:'2-digit'});
+}catch(err){ CTF=null; }
+var WD={Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+var MSHORT=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+var WSHORT=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+function ctNow(){
+  if(!CTF){
+    var d=new Date();
+    return {h:d.getHours(),m:d.getMinutes(),s:d.getSeconds(),day:d.getDay(),
+            wd:WSHORT[d.getDay()],month:MSHORT[d.getMonth()],date:String(d.getDate())};
+  }
+  var p={};
+  CTF.formatToParts(new Date()).forEach(function(x){ if(x.type!=='literal') p[x.type]=x.value; });
+  return {h:parseInt(p.hour,10)%24, m:parseInt(p.minute,10), s:parseInt(p.second,10),
+          day:WD[p.weekday]||0, wd:p.weekday, month:p.month, date:p.day};
+}
+
+function isWeekend(day){ return day===0||day===6; }
+function meal(h){ return (h>=7&&h<8)||(h>=12&&h<13)||(h>=18&&h<19); }
+
+function studentSpots(c,h,day){
+  var H=HOUSE[c.house], dorm=H[c.sex]||H.m, wk=isWeekend(day), out;
+  /* Astronomy is taught at midnight on a Wednesday */
+  if(h===0&&day===3&&c.year<=5) return ['astronomy-tower','astronomy-tower',dorm];
+  if(h<6)  return [dorm,dorm,dorm,dorm,H.common];
+  if(h<7)  return [dorm,dorm,H.common];
+  if(h<8)  return wk?[H.common,'great-hall','great-hall']:['great-hall','great-hall','great-hall',H.common];
+  if(h<9)  return wk?[H.common,'great-hall','entrance-courtyard']:[H.common,'marble-staircase','entrance-hall','great-hall'];
+  if(h<12){ out = wk?weekendSpots(c):c.classes.slice(); if(c.study)out=out.concat(['library','library']); return out; }
+  if(h<13) return ['great-hall','great-hall','great-hall','entrance-hall'];
+  if(h<17){ out = wk?weekendSpots(c):c.classes.slice(); if(c.study)out=out.concat(['library']); return out; }
+  if(h<18) return (c.free||[]).concat(['entrance-courtyard','covered-bridge','black-lake',H.common,'library']);
+  if(h<19) return ['great-hall','great-hall','great-hall'];
+  if(h<21) return [H.common,H.common,'library'].concat(c.free||[]);
+  if(h<23) return [H.common,H.common,H.common,dorm].concat(c.study?['library']:[]);
+  return [dorm,dorm,dorm,H.common];
+}
+function weekendSpots(c){
+  return (c.free||[]).concat(GROUNDSPOTS).concat([HOUSE[c.house].common,'great-hall','hogsmeade-road','library']);
+}
+function staffSpots(c,h,day){
+  var wk=isWeekend(day), night=(h>=22||h<6);
+  if(c.night) return night?[c.teach,c.teach,c.base]:[c.base,'staff-room','great-hall'];
+  if(night)   return c.patrol?CORRIDORS.concat([c.base]):[c.sleep||c.base];
+  if(h<7)  return [c.sleep||c.base];
+  if(h<8)  return ['great-hall','great-hall',c.base];
+  if(h<12) return wk?[c.base,'staff-room'].concat(c.free||[]):[c.teach,c.teach,c.teach,c.base];
+  if(h<13) return ['great-hall','great-hall','great-hall',c.base];
+  if(h<17) return wk?[c.base,'staff-room'].concat(c.free||[]):[c.teach,c.teach,c.teach,c.base];
+  if(h<18) return [c.base,'staff-room'].concat(c.free||[]);
+  if(h<19) return ['great-hall','great-hall','great-hall',c.base];
+  return [c.base,'staff-room'].concat(c.free||[]);
+}
+function spotsFor(c,h,day){
+  var list;
+  if(c.still) return [c.roam[0]];
+  if(c.kind==='student') list=studentSpots(c,h,day);
+  else if(c.roam&&c.roam.length) list=c.roam.slice();
+  else list=staffSpots(c,h,day);
+  /* the moon has its own timetable */
+  if(c.id==='remus-lupin'&&FULLMOON&&(h>=21||h<6)) list=['shrieking-shack','shrieking-shack','whomping-willow'];
+  if(c.id==='rubeus-hagrid'&&(h>=21||h<5)) list=['forbidden-forest','hagrid-hut','forbidden-forest'];
+  if(c.id==='peeves'&&(h>=1&&h<5)) list=list.concat(['hospital-wing','great-hall','trophy-room']);
+  if(c.id==='mrs-norris'&&(h>=22||h<6)) list=CORRIDORS;
+  list=list.filter(function(id){ var r=ROOM[id]; return r&&r.present; });
+  return list.length?list:[ (c.base||c.roam&&c.roam[0]||'great-hall') ];
+}
+
+/* ================================================================
+   THE PEOPLE THEMSELVES
+   ================================================================ */
+var PEOPLE=[], BYID={};
+var STRIDE={human:19,ghost:26,paw:15,tiny:10,huge:40,claw:24,hoof:26,bird:16,spider:13,slither:14,none:1e9};
+
+function inRoom(r,m){
+  m=m||18;
+  var mw=Math.min(m,r.w*0.3), mh=Math.min(m,r.h*0.3);
+  if(r.shape==='round'){
+    var a=RNG()*Math.PI*2, k=Math.sqrt(RNG())*0.78;
+    return {x:r.cx+Math.cos(a)*(r.w/2-mw)*k, y:r.cy+Math.sin(a)*(r.h/2-mh)*k};
+  }
+  return {x:r.x+mw+RNG()*(r.w-2*mw), y:r.y+mh+RNG()*(r.h-2*mh)};
+}
+
+var CT0=ctNow(), hourNow=CT0.h, dayNow=CT0.day;
+CHARS.forEach(function(c){
+  if(c.odds<1&&!(RNG()<c.odds)) return;
+  if(c.nocturnal&&!(hourNow>=20||hourNow<6)&&!chance(.15)) return;
+  var list=spotsFor(c,hourNow,dayNow);
+  var rid=pick(list), r=ROOM[rid]||ROOM['great-hall'];
+  var p=inRoom(r);
+  var pr={def:c,id:c.id,name:c.name,x:p.x,y:p.y,floor:r.floor,room:r.id,dest:r.id,
+          path:null,wi:0,wait:rr(0,4),trail:[],since:0,heading:rr(0,6.28),
+          replan:rr(20,140),acc:0,side:1,speaking:0,say:null};
+  PEOPLE.push(pr);BYID[c.id]=pr;
+});
+
+function repath(pr,rid){
+  var wps=route(pr.room,rid);
+  if(wps===null){ pr.dest=pr.room; return; }
+  pr.dest=rid;
+  pr.path=wps.slice();
+  pr.wi=0;
+}
+function wanderStep(pr){
+  var r=ROOM[pr.room];
+  if(!r){pr.room='great-hall';return;}
+  var p=inRoom(r,22);
+  pr.path=[{x:p.x,y:p.y,floor:r.floor}];
+  pr.wi=0;
+}
+
+function updatePerson(pr,dt,h,day){
+  var c=pr.def;
+  if(c.still){ return; }
+  pr.replan-=dt;
+  if(pr.replan<=0||pr.lastHour!==h){
+    pr.lastHour=h;
+    pr.replan=rr(45,190);
+    var list=spotsFor(c,h,day);
+    var keep=list.indexOf(pr.dest)>=0 && RNG()<(c.chaos?0.1:0.5);
+    if(!keep){ var t=pick(list); if(t!==pr.dest) repath(pr,t); }
+  }
+  if(pr.wait>0){ pr.wait-=dt; return; }
+  if(!pr.path||pr.wi>=pr.path.length){
+    if(pr.room!==pr.dest){ repath(pr,pr.dest); }
+    else if(RNG()<0.85){ wanderStep(pr); pr.wait=rr(0,1.2); }
+    else pr.wait=rr(1,5);
+    if(!pr.path||pr.wi>=pr.path.length){ pr.wait=Math.max(pr.wait,rr(1,4)); return; }
+  }
+  var wp=pr.path[pr.wi];
+  if(wp.floor&&wp.floor!==pr.floor){
+    pr.floor=wp.floor; pr.x=wp.x; pr.y=wp.y; pr.trail.length=0; pr.wi++;
+    pr.room=roomAt(pr)||pr.room; return;
+  }
+  var dx=wp.x-pr.x, dy=wp.y-pr.y, d=Math.hypot(dx,dy);
+  if(d<3){
+    pr.wi++;
+    if(pr.wi>=pr.path.length){
+      pr.path=null; pr.room=roomAt(pr)||pr.dest;
+      pr.wait=rr(1.5,7);
+    }
+    return;
+  }
+  var sp=c.speed*(c.chaos?(1+Math.sin(pr.since*2)*0.4):1);
+  var mv=Math.min(d,sp*dt);
+  pr.x+=dx/d*mv; pr.y+=dy/d*mv;
+  pr.heading=Math.atan2(dy,dx);
+  pr.since+=dt;
+  /* lay down footprints */
+  var stride=STRIDE[c.step]||19;
+  pr.acc+=mv;
+  if(pr.acc>=stride){
+    pr.acc=0; pr.side=-pr.side;
+    var nx=-Math.sin(pr.heading), ny=Math.cos(pr.heading), off=(c.step==='huge'?11:c.step==='tiny'?4:7);
+    pr.trail.push({x:pr.x+nx*off*pr.side, y:pr.y+ny*off*pr.side, a:pr.heading, s:pr.side, t:0, f:pr.floor});
+    if(pr.trail.length>26) pr.trail.shift();
+  }
+}
+function roomAt(pr){
+  var f=null;
+  for(var i=0;i<FLOORS.length;i++) if(FLOORS[i].id===pr.floor){f=FLOORS[i];break;}
+  if(!f) return null;
+  var bestOpen=null;
+  for(var j=0;j<f.rooms.length;j++){
+    var r=f.rooms[j];
+    if(!r.present) continue;
+    if(pr.x>=r.x&&pr.x<=r.x+r.w&&pr.y>=r.y&&pr.y<=r.y+r.h){ if(r.open){bestOpen=bestOpen||r.id;} else return r.id; }
+  }
+  return bestOpen;
+}
+
+/* ================================================================
+   DRAWING THE PARCHMENT
+   ================================================================ */
+var cv=document.getElementById('map'), g=cv.getContext('2d');
+var VW=1,VH=1,DPR=1;
+function resize(){
+  DPR=Math.min(window.devicePixelRatio||1,2.5);
+  VW=cv.clientWidth;VH=cv.clientHeight;
+  cv.width=Math.round(VW*DPR);cv.height=Math.round(VH*DPR);
+}
+window.addEventListener('resize',resize);
+
+function jit(a){return (MRNG()-0.5)*a;}
+function jseg(x1,y1,x2,y2,amp,step){
+  var d=Math.hypot(x2-x1,y2-y1), n=Math.max(2,Math.round(d/(step||42))), out=[];
+  for(var i=0;i<=n;i++){
+    var t=i/n, e=(i===0||i===n)?0.25:1;
+    out.push({x:x1+(x2-x1)*t+jit(amp)*e, y:y1+(y2-y1)*t+jit(amp)*e});
+  }
+  return out;
+}
+function jpoly(pts,amp,close){
+  var out=[];
+  for(var i=1;i<pts.length;i++){
+    var s=jseg(pts[i-1].x,pts[i-1].y,pts[i].x,pts[i].y,amp);
+    out=out.concat(i===1?s:s.slice(1));
+  }
+  if(close&&pts.length>2){
+    var s2=jseg(pts[pts.length-1].x,pts[pts.length-1].y,pts[0].x,pts[0].y,amp);
+    out=out.concat(s2.slice(1));
+  }
+  return out;
+}
+function rectPts(x,y,w,h){return [{x:x,y:y},{x:x+w,y:y},{x:x+w,y:y+h},{x:x,y:y+h}];}
+function ellipsePts(cx,cy,rx,ry,n,wob){
+  var out=[];n=n||34;
+  for(var i=0;i<n;i++){var a=i/n*Math.PI*2,k=1+(wob?jit(wob):0);
+    out.push({x:cx+Math.cos(a)*rx*k,y:cy+Math.sin(a)*ry*k});}
+  out.push(out[0]);return out;
+}
+function offsetPoly(pts,d){
+  var out=[],i,n=pts.length;
+  for(i=0;i<n;i++){
+    var p=pts[i],a=pts[i-1]||pts[i],b=pts[i+1]||pts[i];
+    var d1x=p.x-a.x,d1y=p.y-a.y,l1=Math.hypot(d1x,d1y)||1;
+    var d2x=b.x-p.x,d2y=b.y-p.y,l2=Math.hypot(d2x,d2y)||1;
+    var m1={x:-d1y/l1,y:d1x/l1},m2={x:-d2y/l2,y:d2x/l2};
+    if(i===0)m1=m2; if(i===n-1)m2=m1;
+    var mx=m1.x+m2.x,my=m1.y+m2.y,L=Math.hypot(mx,my)||1;mx/=L;my/=L;
+    var cs=mx*m1.x+my*m1.y; if(cs<0.34)cs=0.34;
+    out.push({x:p.x+mx*d/cs,y:p.y+my*d/cs});
+  }
+  return out;
+}
+
+/* ---- geometry accumulator: everything ends up in a few Path2Ds ---- */
+function Builder(){
+  this.heavy=new Path2D(); this.mid=new Path2D(); this.fine=new Path2D();
+  this.dash=new Path2D();  this.labels=[]; this.fills=[];
+}
+Builder.prototype.stroke=function(bucket,pts,close){
+  var p=this[bucket];
+  p.moveTo(pts[0].x,pts[0].y);
+  for(var i=1;i<pts.length;i++)p.lineTo(pts[i].x,pts[i].y);
+  if(close)p.closePath();
+};
+Builder.prototype.line=function(b,x1,y1,x2,y2,amp){this.stroke(b,jseg(x1,y1,x2,y2,amp===undefined?0.9:amp));};
+Builder.prototype.rect=function(b,x,y,w,h,amp){this.stroke(b,jpoly(rectPts(x,y,w,h),amp===undefined?1.1:amp,1),1);};
+Builder.prototype.circle=function(b,cx,cy,r,wob){this.stroke(b,ellipsePts(cx,cy,r,r,22,wob||0.03));};
+Builder.prototype.ell=function(b,cx,cy,rx,ry,wob){this.stroke(b,ellipsePts(cx,cy,rx,ry,30,wob||0.025));};
+Builder.prototype.arc=function(b,cx,cy,r,a0,a1){
+  var pts=[],n=14;for(var i=0;i<=n;i++){var a=a0+(a1-a0)*i/n;pts.push({x:cx+Math.cos(a)*r+jit(.7),y:cy+Math.sin(a)*r+jit(.7)});}
+  this.stroke(b,pts);
+};
+
+/* ---------------- room furniture ---------------- */
+function decorate(B,r){
+  var d=r.decor,x=r.x,y=r.y,w=r.w,h=r.h,cx=r.cx,cy=r.cy,i,j,n;
+  switch(d){
+  case 'stairs':
+    for(i=1;i<9;i++){var yy=y+h*i/9;B.line('fine',x+9,yy,x+w-9,yy);}
+    B.line('mid',cx,y+6,cx,y+h-6);
+    B.line('fine',x+14,y+h-14,cx-6,cy);B.line('fine',x+w-14,y+h-14,cx+6,cy);
+    break;
+  case 'tables':
+    for(i=0;i<4;i++){var tx=x+w*(0.16+0.22*i);B.rect('fine',tx-9,y+h*0.26,18,h*0.62,0.7);}
+    B.rect('fine',x+w*0.12,y+h*0.09,w*0.76,15,0.7);
+    break;
+  case 'desks':
+    n=Math.floor(w/58);
+    for(i=0;i<n;i++)for(j=0;j<3;j++)B.rect('fine',x+18+i*54,y+h*0.34+j*(h*0.2),30,11,0.6);
+    B.rect('fine',cx-30,y+12,60,15,0.7);
+    break;
+  case 'beds':
+    n=Math.floor(w/70);
+    for(i=0;i<n;i++){var bx=x+16+i*68;
+      B.rect('fine',bx,y+16,40,h*0.3,0.6);B.line('fine',bx,y+16,bx+40,y+16);
+      B.rect('fine',bx,y+h*0.58,40,h*0.3,0.6);}
+    break;
+  case 'shelves': case 'jars':
+    for(i=0;i<4;i++){var sy=y+12+i*(h-24)/4;B.line('fine',x+10,sy,x+w-10,sy,0.6);
+      if(d==='jars')for(j=0;j<6;j++)B.circle('fine',x+22+j*(w-44)/5,sy-5,3.4);}
+    break;
+  case 'fire':
+    B.rect('mid',cx-42,y+8,84,26,0.8);
+    B.arc('fine',cx,y+34,26,Math.PI,0);
+    for(i=0;i<3;i++)B.line('fine',cx-14+i*14,y+30,cx-10+i*14,y+16);
+    B.circle('fine',x+28,cy+h*0.2,16);B.circle('fine',x+w-28,cy+h*0.2,16);
+    B.rect('fine',cx-30,cy+h*0.26,60,20,0.7);
+    break;
+  case 'cauldrons':
+    for(i=0;i<4;i++)for(j=0;j<3;j++){var qx=x+30+i*(w-60)/3,qy=y+h*0.36+j*(h*0.2);
+      B.circle('fine',qx,qy,8);B.line('fine',qx-11,qy-9,qx+11,qy-9);}
+    B.rect('mid',cx-40,y+10,80,18,0.8);B.circle('mid',cx,y+30,13);
+    break;
+  case 'torches':
+    for(i=1;i<6;i++){var lx=x+w*i/6;
+      B.line('fine',lx,y+4,lx,y+15);B.line('fine',lx,y+h-4,lx,y+h-15);
+      B.circle('fine',lx,y+18,3.2);B.circle('fine',lx,y+h-18,3.2);}
+    break;
+  case 'portraits': case 'tapestry':
+    for(i=0;i<5;i++){var px=x+16+i*(w-32)/5;
+      B.rect('fine',px,y+8,(w-32)/5-10,d==='tapestry'?h-20:26,0.6);
+      if(d==='tapestry')for(j=0;j<4;j++)B.line('fine',px+3+j*5,y+h-12,px+3+j*5,y+h-6);}
+    break;
+  case 'armour':
+    for(i=0;i<5;i++){var ax=x+22+i*(w-44)/4;
+      B.circle('fine',ax,y+22,7);B.line('mid',ax,y+29,ax,y+h-16);
+      B.line('fine',ax-9,y+38,ax+9,y+38);B.line('fine',ax+9,y+34,ax+13,y+h-20);}
+    break;
+  case 'trophies':
+    for(i=0;i<6;i++){var gx=x+22+i*(w-44)/5,gy=y+h*0.4+((i%2)*h*0.28);
+      B.arc('fine',gx,gy,8,Math.PI,0);B.line('fine',gx,gy+8,gx,gy+15);B.line('fine',gx-7,gy+15,gx+7,gy+15);}
+    break;
+  case 'water':
+    for(i=0;i<9;i++){var wy=y+22+i*(h-44)/8,pts=[];
+      for(j=0;j<=16;j++)pts.push({x:x+18+j*(w-36)/16,y:wy+Math.sin(j*0.9+i)*3.5+jit(1)});
+      B.stroke('fine',pts);}
+    break;
+  case 'trees':
+    for(i=0;i<52;i++){var tx2=x+12+MRNG()*(w-24),ty2=y+12+MRNG()*(h-24),tr=6+MRNG()*7;
+      B.line('fine',tx2,ty2+tr,tx2,ty2+tr+9);
+      B.stroke('fine',ellipsePts(tx2,ty2,tr,tr*0.85,9,0.28));}
+    break;
+  case 'willow':
+    B.line('heavy',cx,cy+h*0.34,cx,cy-h*0.05);
+    for(i=0;i<16;i++){var a=Math.PI*(0.08+0.84*(i/15)),rr2=h*0.36+MRNG()*22;
+      B.line('mid',cx,cy-h*0.05,cx-Math.cos(a)*rr2,cy-h*0.05-Math.sin(a)*rr2*0.8);}
+    break;
+  case 'hut':
+    B.circle('mid',cx,cy+8,Math.min(w,h)*0.3);
+    B.rect('fine',cx-13,cy+h*0.24,26,20,0.7);
+    B.line('mid',cx+Math.min(w,h)*0.18,cy-14,cx+Math.min(w,h)*0.2,cy-38);
+    for(i=0;i<3;i++)B.arc('fine',cx+Math.min(w,h)*0.19,cy-44-i*9,5,Math.PI*1.15,Math.PI*1.95);
+    break;
+  case 'pumpkins':
+    for(i=0;i<10;i++){var ox=x+22+MRNG()*(w-44),oy=y+18+MRNG()*(h-36),orr=7+MRNG()*5;
+      B.ell('fine',ox,oy,orr,orr*0.8);B.line('fine',ox,oy-orr,ox+2,oy-orr-6);}
+    break;
+  case 'plants':
+    for(i=0;i<3;i++){var hx=x+10+i*(w-20)/3;
+      B.rect('mid',hx,y+12,(w-20)/3-12,h-24,0.8);
+      for(j=0;j<5;j++)B.line('fine',hx+6+j*((w-20)/3-24)/4,y+12,hx+6+j*((w-20)/3-24)/4,y+h-12);}
+    break;
+  case 'pitch':
+    B.ell('mid',cx,cy,w*0.42,h*0.4,0.02);
+    B.ell('fine',cx,cy,w*0.3,h*0.3,0.02);
+    for(i=0;i<6;i++){var side=i<3?-1:1,k=i%3,px2=cx+side*w*0.34,py2=cy+(k-1)*h*0.17;
+      B.line('mid',px2,py2,px2,py2-34);B.circle('fine',px2,py2-42,9);}
+    break;
+  case 'targets':
+    for(i=0;i<3;i++){var ux=x+w*(0.22+0.28*i),uy=y+h*0.5;
+      B.circle('fine',ux,uy,20);B.circle('fine',ux,uy,12);B.circle('fine',ux,uy,4);}
+    break;
+  case 'stones':
+    for(i=0;i<9;i++){var sa=i/9*Math.PI*2;
+      B.rect('mid',cx+Math.cos(sa)*w*0.34-7,cy+Math.sin(sa)*h*0.34-11,14,22,0.9);}
+    break;
+  case 'castle':
+    B.rect('mid',x+30,y+40,w-60,h-90,1.4);
+    B.rect('fine',x+62,y+72,w-124,h-154,1.1);
+    for(i=0;i<4;i++){var ccx=x+34+(i%2)*(w-68),ccy=y+44+((i/2)|0)*(h-88);
+      B.circle('heavy',ccx,ccy,26);B.circle('fine',ccx,ccy,17);
+      for(j=0;j<8;j++)B.line('fine',ccx+Math.cos(j/8*6.28)*26,ccy+Math.sin(j/8*6.28)*26,ccx+Math.cos(j/8*6.28)*32,ccy+Math.sin(j/8*6.28)*32);}
+    B.circle('heavy',cx,y+h-26,30);B.circle('fine',cx,y+h-26,20);
+    for(i=0;i<14;i++){var mx2=x+34+i*(w-68)/13;B.line('fine',mx2,y+40,mx2,y+30);}
+    break;
+  case 'clock':
+    B.circle('mid',cx,cy,Math.min(w,h)*0.33);
+    B.circle('fine',cx,cy,Math.min(w,h)*0.26);
+    B.line('mid',cx,cy,cx+Math.min(w,h)*0.18,cy-Math.min(w,h)*0.06);
+    B.line('mid',cx,cy,cx-Math.min(w,h)*0.04,cy-Math.min(w,h)*0.21);
+    for(i=0;i<12;i++)B.line('fine',cx+Math.cos(i/12*6.28)*Math.min(w,h)*0.29,cy+Math.sin(i/12*6.28)*Math.min(w,h)*0.29,
+                              cx+Math.cos(i/12*6.28)*Math.min(w,h)*0.33,cy+Math.sin(i/12*6.28)*Math.min(w,h)*0.33);
+    break;
+  case 'arches': case 'bridge':
+    B.line('mid',x+6,y+10,x+w-6,y+10);B.line('mid',x+6,y+h-10,x+w-6,y+h-10);
+    n=Math.max(3,Math.floor(w/56));
+    for(i=0;i<n;i++){var axx=x+12+(i+0.5)*(w-24)/n;
+      if(d==='arches')B.arc('fine',axx,y+h-10,(w-24)/n*0.36,Math.PI,0);
+      else B.line('fine',axx,y+10,axx,y+h-10);}
+    break;
+  case 'boats':
+    for(i=0;i<4;i++){var bx2=x+22+i*(w-44)/3,by2=y+h*0.5+(i%2)*20;
+      B.arc('fine',bx2,by2,11,0,Math.PI);B.line('fine',bx2-11,by2,bx2+11,by2);}
+    break;
+  case 'gates':
+    B.rect('heavy',x+4,y+6,20,h-12,0.9);B.rect('heavy',x+w-24,y+6,20,h-12,0.9);
+    B.circle('mid',x+14,y+2,10);B.circle('mid',x+w-14,y+2,10);
+    for(i=0;i<7;i++)B.line('fine',x+26+i*(w-52)/6,y+16,x+26+i*(w-52)/6,y+h-16);
+    break;
+  case 'road':
+    var rp=[];for(i=0;i<=14;i++)rp.push({x:x+8+i*(w-16)/14,y:cy+Math.sin(i*0.55)*h*0.24});
+    B.stroke('dash',offsetPoly(rp,7));B.stroke('dash',offsetPoly(rp,-7));
+    break;
+  case 'shack':
+    B.rect('mid',x+18,y+h*0.34,w-36,h*0.56,1.6);
+    B.stroke('mid',[{x:x+12,y:y+h*0.34},{x:cx,y:y+10},{x:x+w-12,y:y+h*0.34}]);
+    for(i=0;i<5;i++)B.line('fine',x+30+i*(w-60)/4,y+h*0.4,x+26+i*(w-60)/4,y+h*0.84);
+    break;
+  case 'flags':
+    for(i=0;i<6;i++){var fx=x+16+i*(w-32)/5;B.line('fine',fx,y+8,fx,y+30);
+      B.stroke('fine',[{x:fx,y:y+8},{x:fx+11,y:y+13},{x:fx,y:y+18}]);}
+    B.ell('fine',cx,cy+h*0.15,w*0.22,h*0.2,0.05);
+    break;
+  case 'sinks':
+    for(i=0;i<7;i++){var sa2=Math.PI*2*i/7;
+      B.circle('fine',cx+Math.cos(sa2)*w*0.27,cy+Math.sin(sa2)*h*0.27,10);}
+    B.circle('mid',cx,cy,15);
+    break;
+  case 'pipe':
+    B.circle('heavy',cx,cy,Math.min(w,h)*0.24);
+    B.circle('mid',cx,cy,Math.min(w,h)*0.15);
+    var snp=[];for(i=0;i<=18;i++)snp.push({x:cx-w*0.32+i*(w*0.64)/18,y:cy+h*0.3+Math.sin(i*0.8)*7});
+    B.stroke('fine',snp);
+    break;
+  case 'mirror':
+    B.ell('heavy',cx,cy-4,w*0.17,h*0.32,0.02);
+    B.ell('fine',cx,cy-4,w*0.13,h*0.27,0.02);
+    B.line('mid',cx-16,cy+h*0.3,cx+16,cy+h*0.3);
+    break;
+  case 'trapdoor':
+    B.rect('heavy',cx-26,cy-20,52,40,1.2);B.circle('mid',cx+16,cy,6);
+    for(i=0;i<4;i++)B.line('fine',cx-26,cy-20+i*13,cx+26,cy-20+i*13);
+    break;
+  case 'statue':
+    B.circle('mid',cx,cy-14,10);B.line('mid',cx,cy-4,cx,cy+18);
+    B.line('fine',cx-12,cy+4,cx+12,cy+2);B.rect('fine',cx-16,cy+18,32,10,0.6);
+    break;
+  case 'paws':
+    for(i=0;i<3;i++){var hx2=cx-52+i*52;B.circle('mid',hx2,cy-6,17);
+      B.circle('fine',hx2-6,cy-10,3);B.circle('fine',hx2+6,cy-10,3);}
+    B.ell('mid',cx,cy+34,54,20,0.04);
+    break;
+  case 'crystal':
+    B.circle('mid',cx,cy,Math.min(w,h)*0.17);B.arc('fine',cx,cy+Math.min(w,h)*0.2,14,Math.PI,0);
+    for(i=0;i<8;i++){var ka=i/8*6.28;B.line('fine',cx+Math.cos(ka)*Math.min(w,h)*0.26,cy+Math.sin(ka)*Math.min(w,h)*0.26,
+        cx+Math.cos(ka)*Math.min(w,h)*0.33,cy+Math.sin(ka)*Math.min(w,h)*0.33);}
+    break;
+  case 'telescope':
+    B.line('heavy',cx-24,cy+22,cx+24,cy-24);B.line('fine',cx+18,cy-30,cx+30,cy-18);
+    B.line('fine',cx-24,cy+22,cx-34,cy+38);B.line('fine',cx-24,cy+22,cx-10,cy+40);
+    for(i=0;i<7;i++){var st=i/7*6.28;B.circle('fine',cx+Math.cos(st)*w*0.33,cy+Math.sin(st)*h*0.33,2.4);}
+    break;
+  case 'bells':
+    for(i=0;i<3;i++){var bx3=cx-34+i*34;B.arc('mid',bx3,cy,13,Math.PI,0);
+      B.line('fine',bx3-13,cy,bx3+13,cy);B.circle('fine',bx3,cy+5,3);}
+    break;
+  case 'junk':
+    for(i=0;i<26;i++){var jx=x+16+MRNG()*(w-32),jy=y+16+MRNG()*(h-32);
+      B.rect('fine',jx,jy,8+MRNG()*22,7+MRNG()*16,1.6);}
+    B.rect('mid',cx-24,cy-30,48,64,1.4);
+    break;
+  case 'pensieve':
+    B.circle('mid',cx,cy+6,24);B.circle('fine',cx,cy+6,16);
+    for(i=0;i<3;i++)B.arc('fine',cx,cy+6,7+i*4,0.4,4.4);
+    B.rect('fine',cx-30,cy-h*0.28,60,18,0.7);
+    for(i=0;i<5;i++)B.circle('fine',x+18,y+22+i*((h-44)/4),5);
+    break;
+  case 'gargoyle':
+    B.rect('heavy',cx-16,cy-6,32,34,1.2);B.circle('mid',cx,cy-16,13);
+    B.line('fine',cx-16,cy-2,cx-30,cy-16);B.line('fine',cx+16,cy-2,cx+30,cy-16);
+    break;
+  case 'spiral':
+    var sp=[];for(i=0;i<=64;i++){var t2=i/64,ang=t2*Math.PI*4.4,rd=Math.min(w,h)*0.4*(1-t2*0.86);
+      sp.push({x:cx+Math.cos(ang)*rd,y:cy+Math.sin(ang)*rd*0.9});}
+    B.stroke('fine',sp);
+    break;
+  case 'bath':
+    B.ell('mid',cx,cy,w*0.32,h*0.28,0.02);B.ell('fine',cx,cy,w*0.26,h*0.22,0.02);
+    for(i=0;i<10;i++){var ba=i/10*6.28;B.circle('fine',cx+Math.cos(ba)*w*0.36,cy+Math.sin(ba)*h*0.34,4);}
+    break;
+  case 'kitchen':
+    for(i=0;i<4;i++)B.rect('fine',x+16,y+16+i*(h-32)/4,w-32,13,0.7);
+    for(i=0;i<6;i++)B.circle('fine',x+26+i*(w-52)/5,y+h-22,6);
+    break;
+  case 'barrels':
+    for(i=0;i<3;i++)for(j=0;j<3;j++){var vx=x+26+i*(w-52)/2,vy=y+26+j*(h-52)/2;
+      B.circle('fine',vx,vy,11);B.line('fine',vx-11,vy,vx+11,vy);}
+    break;
+  case 'tombs':
+    for(i=0;i<5;i++){var mx3=x+22+i*(w-44)/4;
+      B.rect('fine',mx3-14,cy-24,28,48,0.8);B.line('fine',mx3,cy-16,mx3,cy+16);B.line('fine',mx3-7,cy-6,mx3+7,cy-6);}
+    break;
+  case 'chains':
+    for(i=0;i<7;i++){var hx3=x+16+i*(w-32)/6;
+      for(j=0;j<4;j++)B.circle('fine',hx3,y+12+j*11,4.4);}
+    B.rect('fine',x+w*0.5-24,y+h-34,48,22,0.7);
+    break;
+  case 'brooms':
+    for(i=0;i<4;i++){var qx2=x+18+i*(w-36)/3;
+      B.line('mid',qx2,y+12,qx2+9,y+h-14);
+      for(j=0;j<4;j++)B.line('fine',qx2+9,y+h-14,qx2+3+j*4,y+h-4);}
+    break;
+  case 'doors':
+    B.rect('mid',cx-w*0.3,y+10,w*0.6,h-20,1.1);B.line('mid',cx,y+10,cx,y+h-10);
+    B.circle('fine',cx-9,cy,3.4);B.circle('fine',cx+9,cy,3.4);
+    break;
+  case 'hourglass':
+    for(i=0;i<4;i++){var gx2=x+22+i*(w-44)/3;
+      B.stroke('fine',[{x:gx2-9,y:cy-20},{x:gx2+9,y:cy-20},{x:gx2,y:cy},{x:gx2+9,y:cy+20},{x:gx2-9,y:cy+20},{x:gx2,y:cy}],1);}
+    break;
+  case 'desk':
+    B.rect('mid',cx-w*0.3,cy-10,w*0.6,22,0.9);B.line('fine',cx-w*0.2,cy-4,cx+w*0.2,cy-4);
+    break;
+  case 'owls':
+    for(i=0;i<6;i++){var wa=i/6*6.28,wx=cx+Math.cos(wa)*w*0.28,wy=cy+Math.sin(wa)*h*0.28;
+      B.ell('fine',wx,wy,7,9,0.05);B.line('fine',wx-5,wy-8,wx-3,wy-13);B.line('fine',wx+5,wy-8,wx+3,wy-13);}
+    break;
+  case 'web':
+    for(i=0;i<8;i++)B.line('fine',cx,cy,cx+Math.cos(i/8*6.28)*w*0.4,cy+Math.sin(i/8*6.28)*h*0.4);
+    for(i=1;i<4;i++)B.stroke('fine',ellipsePts(cx,cy,w*0.13*i,h*0.13*i,14,0.1));
+    break;
+  case 'arrow':
+    for(i=0;i<3;i++){var aax=cx-26+i*26;B.line('fine',aax-10,cy+18,aax+10,cy-18);
+      B.stroke('fine',[{x:aax+4,y:cy-10},{x:aax+10,y:cy-18},{x:aax+2,y:cy-16}]);}
+    break;
+  default:
+    for(i=0;i<7;i++)B.line('fine',x+14+MRNG()*(w-28),y+14+MRNG()*(h-28),x+14+MRNG()*(w-28),y+14+MRNG()*(h-28),0.4);
+  }
+}
+
+/* ---------------- build a whole floor ---------------- */
+function buildFloor(f){
+  if(f.built) return;
+  var B=new Builder();
+  /* corridors first, so room walls sit on top of them */
+  f.wires.forEach(function(wr){
+    var bucket=wr.mode==='secret'?'dash':'mid';
+    var base=jpoly(wr.pts,1.0);
+    B.stroke(bucket,offsetPoly(base,13));
+    B.stroke(bucket,offsetPoly(base,-13));
+    if(wr.mode!=='secret'){
+      [[wr.pts[0],wr.pts[1]||wr.pts[0]],[wr.pts[wr.pts.length-1],wr.pts[wr.pts.length-2]||wr.pts[0]]].forEach(function(pair){
+        var p=pair[0],q=pair[1],dx=q.x-p.x,dy=q.y-p.y,L=Math.hypot(dx,dy)||1;
+        var nx=-dy/L,ny=dx/L;
+        B.fills.push({x:p.x,y:p.y,a:Math.atan2(dy,dx)});
+        B.line('fine',p.x+nx*13,p.y+ny*13,p.x+nx*13+dx/L*9,p.y+ny*13+dy/L*9);
+        B.line('fine',p.x-nx*13,p.y-ny*13,p.x-nx*13+dx/L*9,p.y-ny*13+dy/L*9);
+      });
+    }
+  });
+  f.rooms.forEach(function(r){
+    if(!r.present) return;
+    if(r.open){
+      var pts=r.shape==='round'?ellipsePts(r.cx,r.cy,r.w/2,r.h/2,40,0.045)
+                               :jpoly(rectPts(r.x,r.y,r.w,r.h),5,1);
+      B.stroke('dash',pts,1);
+    }else if(r.shape==='round'){
+      B.stroke('heavy',ellipsePts(r.cx,r.cy,r.w/2,r.h/2,44,0.014),1);
+      B.stroke('fine',ellipsePts(r.cx,r.cy,r.w/2-7,r.h/2-7,44,0.014),1);
+    }else{
+      B.stroke('heavy',jpoly(rectPts(r.x,r.y,r.w,r.h),1.4,1),1);
+      B.stroke('fine',jpoly(rectPts(r.x+7,r.y+7,r.w-14,r.h-14),1.1,1),1);
+    }
+    if(r.decor) decorate(B,r);
+    B.labels.push({x:r.cx,y:r.open?r.y+16:r.cy,text:r.name,
+      prio:(r.tiny?0.4:1)*(r.w*r.h)/40000, room:r});
+  });
+  f.geo=B; f.built=true;
+}
+
+/* ---------------- parchment ---------------- */
+var stains=[],fibres=[];
+(function(){
+  for(var i=0;i<190;i++) stains.push({x:MRNG(),y:MRNG(),r:0.02+MRNG()*0.09,a:0.02+MRNG()*0.07});
+  for(var j=0;j<260;j++) fibres.push({x:MRNG(),y:MRNG(),l:0.008+MRNG()*0.03,a:MRNG()*3.14,o:0.03+MRNG()*0.07});
+})();
+var noiseTile=(function(){
+  var c=document.createElement('canvas');c.width=c.height=140;
+  var t=c.getContext('2d'),im=t.createImageData(140,140),dpx=im.data;
+  for(var i=0;i<dpx.length;i+=4){
+    var v=Math.random();
+    dpx[i]=60;dpx[i+1]=34;dpx[i+2]=12;dpx[i+3]=v<0.5?0:Math.floor(v*34);
+  }
+  t.putImageData(im,0,0);return c;
+})();
+var noisePat=null;
+
+function parchEdge(f){
+  if(f.edge) return f.edge;
+  var pad=70,W=f.w+pad*2,H=f.h+pad*2,x0=-pad,y0=-pad,per=[],i,n=140;
+  for(i=0;i<n;i++){
+    var t=i/n,px,py,e=6+MRNG()*9;
+    if(t<0.25){px=x0+W*(t/0.25);py=y0-e;}
+    else if(t<0.5){px=x0+W+e;py=y0+H*((t-0.25)/0.25);}
+    else if(t<0.75){px=x0+W-W*((t-0.5)/0.25);py=y0+H+e;}
+    else{px=x0-e;py=y0+H-H*((t-0.75)/0.25);}
+    per.push({x:px,y:py});
+  }
+  f.edge={per:per,x0:x0,y0:y0,W:W,H:H};
+  return f.edge;
+}
+function drawParchment(f){
+  var E=parchEdge(f),W=E.W,H=E.H,x0=E.x0,y0=E.y0;
+  var grad=g.createLinearGradient(x0,y0,x0+W,y0+H);
+  grad.addColorStop(0,'#e2cca2');
+  grad.addColorStop(0.35,'#dcc396');
+  grad.addColorStop(0.7,'#d2b585');
+  grad.addColorStop(1,'#c3a172');
+  /* torn outline */
+  g.beginPath();
+  var per=E.per,i;
+  g.moveTo(per[0].x,per[0].y);
+  for(i=1;i<per.length;i++)g.lineTo(per[i].x,per[i].y);
+  g.closePath();
+  g.fillStyle=grad;g.fill();
+  g.save();g.clip();
+  /* stains */
+  for(i=0;i<stains.length;i++){
+    var s=stains[i],sx=x0+s.x*W,sy=y0+s.y*H,sr=s.r*Math.min(W,H);
+    var rg=g.createRadialGradient(sx,sy,0,sx,sy,sr);
+    rg.addColorStop(0,'rgba(120,74,28,'+s.a+')');
+    rg.addColorStop(1,'rgba(120,74,28,0)');
+    g.fillStyle=rg;g.fillRect(sx-sr,sy-sr,sr*2,sr*2);
+  }
+  /* fibres */
+  g.lineWidth=1.1;
+  for(i=0;i<fibres.length;i++){
+    var fb=fibres[i],fx=x0+fb.x*W,fy=y0+fb.y*H,fl=fb.l*W;
+    g.strokeStyle='rgba(110,70,30,'+fb.o+')';
+    g.beginPath();g.moveTo(fx,fy);g.lineTo(fx+Math.cos(fb.a)*fl,fy+Math.sin(fb.a)*fl);g.stroke();
+  }
+  /* fold creases, as in the original */
+  var folds=[[x0+W/3,y0,x0+W/3,y0+H],[x0+2*W/3,y0,x0+2*W/3,y0+H],[x0,y0+H/2,x0+W,y0+H/2]];
+  for(i=0;i<folds.length;i++){
+    var fd=folds[i],vert=fd[0]===fd[2];
+    var fg=vert?g.createLinearGradient(fd[0]-26,0,fd[0]+26,0):g.createLinearGradient(0,fd[1]-26,0,fd[1]+26);
+    fg.addColorStop(0,'rgba(120,78,34,0)');fg.addColorStop(0.42,'rgba(107,64,24,0.22)');
+    fg.addColorStop(0.5,'rgba(90,52,18,0.30)');fg.addColorStop(0.58,'rgba(107,64,24,0.16)');
+    fg.addColorStop(1,'rgba(120,78,34,0)');
+    g.fillStyle=fg;
+    if(vert)g.fillRect(fd[0]-26,y0,52,H);else g.fillRect(x0,fd[1]-26,W,52);
+  }
+  /* scorched border */
+  g.strokeStyle='rgba(70,38,12,0.5)';g.lineWidth=9;
+  g.beginPath();g.moveTo(per[0].x,per[0].y);
+  for(i=1;i<per.length;i++)g.lineTo(per[i].x,per[i].y);
+  g.closePath();g.stroke();
+  g.strokeStyle='rgba(46,22,6,0.75)';g.lineWidth=3;g.stroke();
+  g.restore();
+}
+
+/* ================================================================
+   FOOTPRINTS
+   ================================================================ */
+var LIFE=6.2;
+function footAlpha(t){
+  if(t<0.22) return t/0.22;
+  if(t>LIFE-2.0) return Math.max(0,(LIFE-t)/2.0);
+  return 1;
+}
+function drawFoot(style,x,y,a,side,alpha,k){
+  g.save();g.translate(x,y);g.rotate(a+Math.PI/2);g.scale(side<0?-1:1,1);g.scale(k,k);
+  g.fillStyle='rgba(48,22,7,'+alpha+')';
+  g.strokeStyle='rgba(48,22,7,'+alpha+')';
+  var i;
+  switch(style){
+  case 'human': case 'huge':
+    var sc=style==='huge'?1.9:1;
+    g.beginPath();g.ellipse(0,0,3.1*sc,5.6*sc,0,0,6.2832);g.fill();
+    g.beginPath();g.ellipse(0.5*sc,-5.6*sc,2.5*sc,1.9*sc,0,0,6.2832);g.fill();
+    for(i=0;i<5;i++){
+      g.beginPath();
+      g.ellipse((-1.9+i*1.05)*sc,(-7.9-Math.sin(i*0.8)*0.5)*sc,0.85*sc,0.95*sc,0,0,6.2832);g.fill();
+    }
+    break;
+  case 'paw':
+    g.beginPath();g.ellipse(0,0,3.0,2.6,0,0,6.2832);g.fill();
+    for(i=0;i<4;i++){g.beginPath();g.ellipse(-2.6+i*1.75,-4.0-Math.cos(i*1.05)*0.8,1.0,1.2,0,0,6.2832);g.fill();}
+    break;
+  case 'tiny':
+    g.beginPath();g.ellipse(0,0,1.7,2.3,0,0,6.2832);g.fill();
+    for(i=0;i<3;i++){g.beginPath();g.ellipse(-1.3+i*1.3,-2.9,0.6,0.7,0,0,6.2832);g.fill();}
+    break;
+  case 'ghost':
+    g.globalAlpha=0.55;g.lineWidth=0.9;
+    g.beginPath();g.ellipse(0,0,3.0,5.4,0,0,6.2832);g.setLineDash([1.6,2.0]);g.stroke();
+    g.setLineDash([]);
+    for(i=0;i<3;i++){g.beginPath();g.arc(-1.6+i*1.6,-7.4,0.7,0,6.2832);g.stroke();}
+    break;
+  case 'claw':
+    for(i=0;i<3;i++){
+      g.beginPath();g.moveTo(-2.6+i*2.6,2.4);g.lineTo(-3.4+i*2.9,-4.6);g.lineTo(-1.9+i*2.9,-4.6);g.closePath();g.fill();
+    }
+    g.beginPath();g.ellipse(0,3.0,2.6,1.6,0,0,6.2832);g.fill();
+    break;
+  case 'hoof':
+    g.beginPath();g.arc(0,0,3.0,Math.PI*0.15,Math.PI*0.85);g.lineWidth=2.0;g.stroke();
+    g.beginPath();g.arc(0,-1.2,2.2,Math.PI*0.2,Math.PI*0.8);g.lineWidth=1.4;g.stroke();
+    break;
+  case 'bird':
+    g.lineWidth=0.9;
+    for(i=0;i<3;i++){g.beginPath();g.moveTo(0,1.8);g.lineTo((i-1)*2.6,-3.2);g.stroke();}
+    g.beginPath();g.moveTo(0,1.8);g.lineTo(0,4.0);g.stroke();
+    break;
+  case 'spider':
+    for(i=0;i<8;i++){var aa=i/8*6.2832;
+      g.beginPath();g.ellipse(Math.cos(aa)*3.4,Math.sin(aa)*3.4,0.75,0.75,0,0,6.2832);g.fill();}
+    break;
+  case 'slither':
+    g.lineWidth=1.7;g.beginPath();
+    for(i=0;i<=10;i++)g.lineTo((i-5)*1.5,Math.sin(i*0.9)*2.2);
+    g.stroke();
+    break;
+  }
+  g.restore();
+}
+function drawPerson(pr,k,sel){
+  var st=pr.def.step;
+  if(st==='none') return;
+  var i,t;
+  for(i=0;i<pr.trail.length;i++){
+    t=pr.trail[i];
+    if(t.f!==pr.floor) continue;
+    var al=footAlpha(t.t)*0.82*ink;
+    if(al<=0.02) continue;
+    drawFoot(st,t.x,t.y,t.a,t.s,al,k);
+  }
+  /* the pair you are standing in */
+  var nx=-Math.sin(pr.heading),ny=Math.cos(pr.heading),off=(st==='huge'?11:st==='tiny'?4:7);
+  var pulse=sel?0.9+Math.sin(clock*4)*0.1:1;
+  drawFoot(st,pr.x+nx*off,pr.y+ny*off,pr.heading, 1,0.95*ink*pulse,k);
+  drawFoot(st,pr.x-nx*off,pr.y-ny*off,pr.heading,-1,0.95*ink*pulse,k);
+}
+
+/* ================================================================
+   NAME BANNERS
+   ================================================================ */
+function banner(sx,sy,text,alpha,strong){
+  var fs=strong?12.5:10.8;
+  g.font=fs+'px "IM Fell English SC", Georgia, serif';
+  var tw=g.measureText(text).width, w=tw+26, h=fs+10, tail=7;
+  g.save();g.translate(sx,sy);g.globalAlpha=alpha;
+  /* ribbon tails */
+  g.fillStyle='rgba(178,141,90,0.9)';
+  g.beginPath();
+  g.moveTo(-w/2,-h/2+2);g.lineTo(-w/2-tail,-h/2-3);g.lineTo(-w/2-tail,h/2+4);g.lineTo(-w/2,h/2-2);g.closePath();
+  g.moveTo(w/2,-h/2+2);g.lineTo(w/2+tail,-h/2-3);g.lineTo(w/2+tail,h/2+4);g.lineTo(w/2,h/2-2);g.closePath();
+  g.fill();
+  g.strokeStyle='rgba(48,22,7,0.85)';g.lineWidth=1;g.stroke();
+  /* body */
+  g.beginPath();
+  g.moveTo(-w/2,-h/2);g.lineTo(w/2,-h/2);g.lineTo(w/2-8,0);g.lineTo(w/2,h/2);
+  g.lineTo(-w/2,h/2);g.lineTo(-w/2+8,0);g.closePath();
+  var grd=g.createLinearGradient(0,-h/2,0,h/2);
+  grd.addColorStop(0,'rgba(233,214,175,0.97)');grd.addColorStop(1,'rgba(203,172,124,0.97)');
+  g.fillStyle=grd;g.fill();
+  g.lineWidth=strong?1.5:1.1;g.strokeStyle='rgba(48,22,7,'+(strong?0.95:0.8)+')';g.stroke();
+  g.fillStyle='rgba(40,18,5,0.96)';
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillText(text,0,1);
+  g.restore();
+}
+
+/* ================================================================
+   CAMERA AND THE MAIN LOOP
+   ================================================================ */
+var cam={x:900,y:600,s:0.4}, camGoal=null, fi=0, ink=0, reveal=0, clock=0;
+var floorNow=FLOORS[0];
+function fitScale(f){ return Math.min(VW/(f.w+150), VH/(f.h+150)); }
+function clampCam(){
+  var f=floorNow, mn=fitScale(f)*0.8, mx=3.6;
+  cam.s=Math.max(mn,Math.min(mx,cam.s));
+  var pad=280;
+  cam.x=Math.max(-pad,Math.min(f.w+pad,cam.x));
+  cam.y=Math.max(-pad,Math.min(f.h+pad,cam.y));
+}
+function toScreen(x,y){ return {x:(x-cam.x)*cam.s+VW/2, y:(y-cam.y)*cam.s+VH/2}; }
+function toWorld(sx,sy){ return {x:(sx-VW/2)/cam.s+cam.x, y:(sy-VH/2)/cam.s+cam.y}; }
+
+function setFloor(i,keep){
+  fi=i; floorNow=FLOORS[i];
+  buildFloor(floorNow);
+  Array.prototype.forEach.call(rail.children,function(b,n){b.setAttribute('aria-current',n===i?'true':'false');});
+  if(!keep){
+    var f=floorNow, fs=fitScale(f), s;
+    /* portrait: fill the height and let the reader pan sideways. landscape: a gentle crop. */
+    if(VH>VW) s=Math.min(2.4, VH/(f.h*1.22));
+    else s=Math.min(2.6, fs*1.3);
+    camGoal={x:f.w/2,y:f.h/2,s:Math.max(fs,s)};
+  }
+}
+function flyTo(x,y,s){ camGoal={x:x,y:y,s:s===undefined?Math.max(cam.s,1.15):s}; }
+
+/* ---------------- rendering one frame ---------------- */
+var labelBoxes=[];
+function overlaps(b){
+  for(var i=0;i<labelBoxes.length;i++){
+    var o=labelBoxes[i];
+    if(Math.abs(b.x-o.x)*2<(b.w+o.w)&&Math.abs(b.y-o.y)*2<(b.h+o.h)) return true;
+  }
+  return false;
+}
+function draw(){
+  g.setTransform(DPR,0,0,DPR,0,0);
+  g.fillStyle='#221306';g.fillRect(0,0,VW,VH);
+  var f=floorNow;
+  g.save();
+  g.translate(VW/2,VH/2);g.scale(cam.s,cam.s);g.translate(-cam.x,-cam.y);
+  drawParchment(f);
+  if(reveal<1){
+    var rmax=Math.hypot(f.w,f.h)*0.75;
+    g.beginPath();g.arc(f.w/2,f.h/2,Math.max(0,rmax*reveal),0,6.2832);g.clip();
+  }
+  var geo=f.geo;
+  g.lineJoin='round';g.lineCap='round';
+  g.setLineDash([]);
+  g.strokeStyle='rgba(66,32,12,'+(0.93*ink)+')';g.lineWidth=Math.max(2.4,1.7/cam.s);g.stroke(geo.heavy);
+  g.strokeStyle='rgba(84,44,18,'+(0.88*ink)+')';g.lineWidth=Math.max(1.6,1.1/cam.s);g.stroke(geo.mid);
+  g.strokeStyle='rgba(100,58,26,'+(0.80*ink)+')';g.lineWidth=Math.max(0.95,0.7/cam.s);g.stroke(geo.fine);
+  g.setLineDash([9,7]);
+  g.strokeStyle='rgba(100,58,26,'+(0.62*ink)+')';g.lineWidth=Math.max(1.1,0.8/cam.s);g.stroke(geo.dash);
+  g.setLineDash([]);
+  /* doorways */
+  g.fillStyle='rgba(213,187,143,'+ink+')';
+  for(var i=0;i<geo.fills.length;i++){
+    var dd=geo.fills[i];
+    g.save();g.translate(dd.x,dd.y);g.rotate(dd.a);
+    g.fillRect(-7,-12.5,14,25);
+    g.strokeStyle='rgba(84,44,18,'+(0.7*ink)+')';g.lineWidth=Math.max(1,0.8/cam.s);
+    g.beginPath();g.moveTo(-6,-12.5);g.lineTo(6,-12.5);g.moveTo(-6,12.5);g.lineTo(6,12.5);g.stroke();
+    g.restore();
+  }
+  /* the cartouche */
+  drawCartouche(f);
+  /* people on this level */
+  var k=Math.max(1,Math.min(3.4,0.95/cam.s));
+  var here=[];
+  for(i=0;i<PEOPLE.length;i++){
+    var pr=PEOPLE[i];
+    if(pr.floor!==f.id) continue;
+    here.push(pr);
+    drawPerson(pr,k,pr===selected);
+  }
+  g.restore();
+
+  /* ---- screen-space lettering ---- */
+  labelBoxes.length=0;
+  g.textAlign='center';g.textBaseline='middle';
+  /* names first: they win any argument with a room label */
+  here.sort(function(a,b){
+    if(a===selected)return 1; if(b===selected)return -1;
+    return b.def.rank-a.def.rank;
+  });
+  var shown=[];
+  for(i=here.length-1;i>=0;i--){
+    var p=here[i],sp=toScreen(p.x,p.y);
+    if(sp.x<-90||sp.x>VW+90||sp.y<-60||sp.y>VH+60) continue;
+    var strong=(p===selected);
+    var fsz=strong?12.5:10.8;
+    g.font=fsz+'px "IM Fell English SC", Georgia, serif';
+    var bw=g.measureText(p.name).width+26, bh=fsz+12;
+    var by=sp.y-26-(k*10);
+    var box={x:sp.x,y:by,w:bw+8,h:bh+4};
+    if(!strong&&overlaps(box)) continue;
+    labelBoxes.push(box);
+    shown.push({p:p,x:sp.x,y:by,strong:strong});
+  }
+  for(i=0;i<shown.length;i++){
+    var s=shown[i];
+    g.globalAlpha=1;
+    g.strokeStyle='rgba(48,22,7,'+(0.5*ink)+')';g.lineWidth=1;
+    g.beginPath();g.moveTo(s.x,s.y+8);g.lineTo(s.x+2,s.y+18);g.stroke();
+    banner(s.x,s.y,s.p.name,ink*(s.strong?1:0.92),s.strong);
+  }
+  /* room names */
+  var rf=Math.max(8.6,Math.min(15,26*cam.s));
+  g.font=rf+'px "IM Fell English SC", Georgia, serif';
+  var labels=f.geo.labels.slice().sort(function(a,b){return b.prio-a.prio;});
+  for(i=0;i<labels.length;i++){
+    var L2=labels[i],sp2=toScreen(L2.x,L2.y);
+    if(sp2.x<-140||sp2.x>VW+140||sp2.y<-40||sp2.y>VH+40) continue;
+    var tw=g.measureText(L2.text).width;
+    if(tw>L2.room.w*cam.s*1.35) continue;
+    var bx={x:sp2.x,y:sp2.y,w:tw+14,h:rf+9};
+    if(overlaps(bx)) continue;
+    labelBoxes.push(bx);
+    g.fillStyle='rgba(58,28,10,'+(0.86*ink)+')';
+    g.fillText(L2.text,sp2.x,sp2.y);
+  }
+  g.globalAlpha=1;
+
+  /* grain and vignette */
+  if(!noisePat) noisePat=g.createPattern(noiseTile,'repeat');
+  g.fillStyle=noisePat;g.globalAlpha=0.5;g.fillRect(0,0,VW,VH);g.globalAlpha=1;
+  var vg=g.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*0.28,VW/2,VH/2,Math.max(VW,VH)*0.78);
+  vg.addColorStop(0,'rgba(30,14,4,0)');vg.addColorStop(1,'rgba(24,11,3,0.62)');
+  g.fillStyle=vg;g.fillRect(0,0,VW,VH);
+}
+
+function drawCartouche(f){
+  var cx=f.w/2, top=-30;
+  g.textAlign='center';g.textBaseline='middle';
+  g.fillStyle='rgba(64,32,12,'+(0.8*ink)+')';
+  g.font='italic '+Math.round(f.w*0.0135)+'px "IM Fell English", Georgia, serif';
+  g.fillText('Messrs Moony, Wormtail, Padfoot & Prongs, Purveyors of Aids to Magical Mischief-Makers,',cx,top-34);
+  g.fillText('are proud to present',cx,top-14);
+  g.font=Math.round(f.w*0.028)+'px "IM Fell English SC", Georgia, serif';
+  g.fillStyle='rgba(54,26,9,'+(0.92*ink)+')';
+  g.fillText(f.name.toUpperCase(),cx,top+18);
+  g.strokeStyle='rgba(64,32,12,'+(0.6*ink)+')';g.lineWidth=1.6;
+  g.beginPath();g.moveTo(cx-f.w*0.22,top+38);g.lineTo(cx+f.w*0.22,top+38);g.stroke();
+  g.beginPath();g.moveTo(cx-f.w*0.19,top+43);g.lineTo(cx+f.w*0.19,top+43);g.stroke();
+  var by=f.h+42;
+  g.font='italic '+Math.round(f.w*0.013)+'px "IM Fell English", Georgia, serif';
+  g.fillStyle='rgba(64,32,12,'+(0.62*ink)+')';
+  g.fillText(FOOTER,cx,by);
+}
+var FOOTER='A complete plan of the school, its grounds, and every soul within its walls.';
+
+/* ================================================================
+   TIME, AND THE PASSING OF IT
+   ================================================================ */
+var last=performance.now();
+function tick(now){
+  var dt=Math.max(0,Math.min(0.06,(now-last)/1000)); last=now; clock+=dt;
+  if(cv.clientWidth!==VW||cv.clientHeight!==VH){ resize(); clampCam(); }
+  var t=ctNow(); var h=t.h, day=t.day;
+  if(running){
+    for(var i=0;i<PEOPLE.length;i++){
+      var pr=PEOPLE[i];
+      updatePerson(pr,dt,h,day);
+      for(var j=pr.trail.length-1;j>=0;j--){
+        pr.trail[j].t+=dt;
+        if(pr.trail[j].t>LIFE) pr.trail.splice(j,1);
+      }
+    }
+  }
+  if(reveal<1) reveal=Math.min(1,reveal+dt*0.62);
+  ink+=((wiped?0:1)-ink)*Math.min(1,dt*(wiped?2.2:1.6));
+  if(camGoal){
+    var e=Math.min(1,dt*4.2);
+    cam.x+=(camGoal.x-cam.x)*e; cam.y+=(camGoal.y-cam.y)*e;
+    cam.s+=(camGoal.s-cam.s)*e;
+    if(Math.abs(camGoal.x-cam.x)<0.6&&Math.abs(camGoal.y-cam.y)<0.6&&Math.abs(camGoal.s-cam.s)<0.002)camGoal=null;
+  }
+  clampCam();
+  try{ draw(); }catch(err){ /* never let one bad frame stop the map */ }
+  requestAnimationFrame(tick);
+}
+
+/* ================================================================
+   THE READER'S HANDS
+   ================================================================ */
+var rail=document.getElementById('rail'),
+    seek=document.getElementById('seek'), hits=document.getElementById('hits'),
+    card=document.getElementById('card'), toastEl=document.getElementById('toast'),
+    intro=document.getElementById('intro'), spellBtn=document.getElementById('spell');
+var selected=null, running=true, wiped=false, sworn=false;
+
+CHARS.forEach(function(c,i){c.rank=i;});
+
+FLOORS.forEach(function(f,i){
+  var b=document.createElement('button');
+  b.className='fbtn';b.type='button';b.textContent=f.short;
+  b.setAttribute('aria-current',i===0?'true':'false');
+  b.addEventListener('click',function(){ setFloor(i); closeCard(); });
+  rail.appendChild(b);
+});
+function floorIndex(id){for(var i=0;i<FLOORS.length;i++)if(FLOORS[i].id===id)return i;return 0;}
+
+/* ---------------- pan, pinch, zoom ---------------- */
+var ptrs={}, nptr=0, moved=0, pinch=null;
+cv.addEventListener('pointerdown',function(e){
+  cv.setPointerCapture(e.pointerId);
+  ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
+  nptr++; moved=0; camGoal=null;
+  if(nptr===2) startPinch();
+});
+function ptrList(){var a=[];for(var k in ptrs)a.push(ptrs[k]);return a;}
+function startPinch(){
+  var a=ptrList(); if(a.length<2) return;
+  var mid={x:(a[0].x+a[1].x)/2,y:(a[0].y+a[1].y)/2};
+  var r=cv.getBoundingClientRect();
+  pinch={d:Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y),s:cam.s,
+         w:toWorld(mid.x-r.left,mid.y-r.top)};
+}
+cv.addEventListener('pointermove',function(e){
+  var p=ptrs[e.pointerId]; if(!p) return;
+  var dx=e.clientX-p.x, dy=e.clientY-p.y;
+  p.x=e.clientX; p.y=e.clientY;
+  moved+=Math.abs(dx)+Math.abs(dy);
+  var a=ptrList(), r=cv.getBoundingClientRect();
+  if(a.length>=2&&pinch){
+    var d=Math.hypot(a[0].x-a[1].x,a[0].y-a[1].y);
+    var mid={x:(a[0].x+a[1].x)/2-r.left,y:(a[0].y+a[1].y)/2-r.top};
+    cam.s=pinch.s*(d/(pinch.d||1));
+    clampCam();
+    cam.x=pinch.w.x-(mid.x-VW/2)/cam.s;
+    cam.y=pinch.w.y-(mid.y-VH/2)/cam.s;
+    clampCam();
+  }else{
+    cam.x-=dx/cam.s; cam.y-=dy/cam.s; clampCam();
+  }
+});
+function up(e){
+  if(ptrs[e.pointerId]){ delete ptrs[e.pointerId]; nptr=Math.max(0,nptr-1); }
+  if(nptr<2) pinch=null;
+  if(nptr===1) startPinch();
+  if(nptr===0&&moved<10){
+    var r=cv.getBoundingClientRect();
+    hitTest(e.clientX-r.left,e.clientY-r.top);
+  }
+}
+cv.addEventListener('pointerup',up);
+cv.addEventListener('pointercancel',up);
+cv.addEventListener('wheel',function(e){
+  e.preventDefault();
+  var r=cv.getBoundingClientRect(), mx=e.clientX-r.left, my=e.clientY-r.top;
+  var w=toWorld(mx,my);
+  camGoal=null;
+  cam.s*=Math.exp(-e.deltaY*0.0016);
+  clampCam();
+  cam.x=w.x-(mx-VW/2)/cam.s; cam.y=w.y-(my-VH/2)/cam.s;
+  clampCam();
+},{passive:false});
+
+window.addEventListener('keydown',function(e){
+  if(document.activeElement===seek) return;
+  var st=140/cam.s;
+  if(e.key==='ArrowLeft'){cam.x-=st;camGoal=null;}
+  else if(e.key==='ArrowRight'){cam.x+=st;camGoal=null;}
+  else if(e.key==='ArrowUp'){cam.y-=st;camGoal=null;}
+  else if(e.key==='ArrowDown'){cam.y+=st;camGoal=null;}
+  else if(e.key==='+'||e.key==='='){cam.s*=1.2;camGoal=null;}
+  else if(e.key==='-'||e.key==='_'){cam.s/=1.2;camGoal=null;}
+  else if(e.key==='Escape'){closeCard();hits.classList.remove('on');}
+  else if(e.key>='1'&&e.key<='8'){var n=+e.key-1;if(FLOORS[n])setFloor(n);}
+  else return;
+  clampCam();
+});
+
+/* ---------------- picking a name off the parchment ---------------- */
+function hitTest(sx,sy){
+  var best=null,bd=1e9;
+  for(var i=0;i<PEOPLE.length;i++){
+    var p=PEOPLE[i]; if(p.floor!==floorNow.id) continue;
+    var s=toScreen(p.x,p.y), d=Math.hypot(s.x-sx,s.y-sy+22);
+    var d2=Math.hypot(s.x-sx,s.y-sy);
+    d=Math.min(d,d2);
+    if(d<bd){bd=d;best=p;}
+  }
+  if(best&&bd<46) showCard(best); else closeCard();
+}
+var SECRETS={
+ 'peter-pettigrew':['<b>Wormtail.</b>','The map is never wrong. It was made by four boys who knew exactly what they were doing, and one of them is standing in Gryffindor Tower right now.'],
+ 'sirius-black':['<b>Padfoot.</b>','A great black dog on the grounds. The Ministry has him listed elsewhere. The map disagrees.'],
+ 'tom-riddle':['<b>Tom Riddle.</b>','Sixteen years old and fifty years dead, walking about beneath the second-floor bathroom. Shut the diary.'],
+ 'barty-crouch-jr':['<b>Bartemius Crouch Jr.</b>','He is standing in a room where somebody else ought to be standing. Look again at the name.'],
+ 'nicolas-flamel':['<b>Nicolas Flamel.</b>','Six hundred and sixty-five years old, and at the front gates for a quiet word with an old friend.'],
+ 'nagini':['<b>Nagini.</b>','Something long is moving through the Forest that the Forest did not raise.'],
+ 'regulus-black':['<b>R.A.B.</b>','A name in the dungeons that the map has no business knowing.']
+};
+function showCard(p){
+  selected=p;
+  document.getElementById('cardName').textContent=p.name;
+  document.getElementById('cardRole').textContent=p.def.role||'';
+  var r=ROOM[p.room];
+  document.getElementById('cardWhere').textContent=(r?r.name:'somewhere in the castle')+
+      ' — '+stripAmp(floorNow.name);
+  document.getElementById('cardFact').textContent=p.def.fact||'';
+  card.classList.add('on');
+  if(p.def.secret&&SECRETS[p.id]&&!p.told){ p.told=1; toast(SECRETS[p.id]); }
+}
+function closeCard(){ card.classList.remove('on'); selected=null; }
+document.getElementById('cardX').addEventListener('click',closeCard);
+function stripAmp(s){return s.replace(/&amp;/g,'&');}
+
+/* ---------------- toasts ---------------- */
+var toastTimer=null;
+function toast(lines,ms){
+  toastEl.innerHTML=lines.map(function(l){return '<p>'+l+'</p>';}).join('');
+  toastEl.classList.add('on');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(function(){toastEl.classList.remove('on');},ms||6500);
+}
+toastEl.addEventListener('click',function(){toastEl.classList.remove('on');});
+
+/* ---------------- seeking a name ---------------- */
+function renderHits(q){
+  hits.innerHTML='';
+  if(!q){hits.classList.remove('on');return;}
+  var ql=q.toLowerCase(), found=[];
+  for(var i=0;i<PEOPLE.length;i++){
+    var p=PEOPLE[i];
+    if(p.name.toLowerCase().indexOf(ql)>=0||(p.def.role||'').toLowerCase().indexOf(ql)>=0) found.push(p);
+  }
+  found.sort(function(a,b){return a.def.rank-b.def.rank;});
+  if(!found.length){
+    hits.innerHTML='<div class="hit"><span>Not upon the map.</span><em>try another name</em></div>';
+    hits.classList.add('on');return;
+  }
+  found.slice(0,9).forEach(function(p){
+    var d=document.createElement('div');d.className='hit';
+    var r=ROOM[p.room];
+    d.innerHTML='<span></span><em></em>';
+    d.firstChild.textContent=p.name;
+    d.lastChild.textContent=r?r.name:'';
+    d.addEventListener('click',function(){
+      setFloor(floorIndex(p.floor),true);
+      flyTo(p.x,p.y,Math.max(cam.s,1.25));
+      showCard(p);
+      hits.classList.remove('on'); seek.value=''; seek.blur();
+    });
+    hits.appendChild(d);
+  });
+  hits.classList.add('on');
+}
+seek.addEventListener('input',function(){renderHits(seek.value.trim());});
+seek.addEventListener('focus',function(){if(seek.value.trim())renderHits(seek.value.trim());});
+document.addEventListener('pointerdown',function(e){
+  if(!document.getElementById('seekwrap').contains(e.target)) hits.classList.remove('on');
+},true);
+
+/* ---------------- the incantations ---------------- */
+function manageMischief(){
+  wiped=true; running=false; closeCard();
+  toast(['<b>Mischief Managed.</b>'],2600);
+  setTimeout(function(){
+    intro.classList.remove('gone');
+    document.getElementById('swear').textContent='“I solemnly swear that I am up to no good.”';
+  },1500);
+}
+function unfold(){
+  wiped=false; running=true; reveal=0;
+  intro.classList.add('gone');
+  if(!sworn){
+    sworn=true;
+    setTimeout(function(){
+      toast(['<b>Drag</b> to move about the castle, <b>pinch</b> or scroll to look closer.',
+             'The tabs on the right take you up and down the floors. Tap any name to see who it is.'],7000);
+    },2200);
+  }
+}
+spellBtn.addEventListener('click',manageMischief);
+document.getElementById('swear').addEventListener('click',unfold);
+
+/* Snape's welcome, for anyone who taps the title three times */
+var INSULTS=[
+ ['<b>Mr Moony</b> presents his compliments to Professor Snape, and begs him to keep his abnormally large nose out of other people’s business.'],
+ ['<b>Mr Prongs</b> agrees with Mr Moony, and would like to add that Professor Snape is an ugly git.'],
+ ['<b>Mr Padfoot</b> would like to register his astonishment that an idiot like that ever became a professor.'],
+ ['<b>Mr Wormtail</b> bids Professor Snape good day, and advises him to wash his hair, the slimeball.']
+];
+var taps=0,tapTimer=null,insult=0;
+document.getElementById('brandName').addEventListener('click',function(){
+  taps++; clearTimeout(tapTimer); tapTimer=setTimeout(function(){taps=0;},1400);
+  if(taps>=3){ taps=0; toast(INSULTS[insult%INSULTS.length]); insult++; }
+});
+
+/* ---------------- the clock, in Central Time ---------------- */
+var MONTHS={Jan:'January',Feb:'February',Mar:'March',Apr:'April',May:'May',Jun:'June',
+  Jul:'July',Aug:'August',Sep:'September',Oct:'October',Nov:'November',Dec:'December'};
+var DAYS={Sun:'Sunday',Mon:'Monday',Tue:'Tuesday',Wed:'Wednesday',Thu:'Thursday',Fri:'Friday',Sat:'Saturday'};
+function pad(n){return (n<10?'0':'')+n;}
+function tickClock(){
+  var t=ctNow();
+  document.getElementById('ctime').textContent=pad(t.h)+':'+pad(t.m);
+  var note='';
+  if(t.h>=7&&t.h<8) note=' · breakfast';
+  else if(t.h>=12&&t.h<13) note=' · luncheon';
+  else if(t.h>=18&&t.h<19) note=' · dinner';
+  else if(t.h>=23||t.h<6) note=' · after hours';
+  else if(FULLMOON&&(t.h>=20||t.h<6)) note=' · full moon';
+  document.getElementById('cdate').textContent=(DAYS[t.wd]||t.wd)+', '+(MONTHS[t.month]||t.month)+' '+t.date+note;
+}
+setInterval(tickClock,1000);
+
+/* ================================================================
+   UNFOLD
+   ================================================================ */
+resize();
+setFloor(floorIndex('ground'));
+if(camGoal){cam.x=camGoal.x;cam.y=camGoal.y;cam.s=camGoal.s;camGoal=null;}
+FLOORS.forEach(buildFloor);
+tickClock();
+if(document.fonts&&document.fonts.ready) document.fonts.ready.then(function(){});
+window.addEventListener('resize',function(){ setTimeout(function(){resize();clampCam();},60); });
+requestAnimationFrame(tick);
+
+})();
+</script>
