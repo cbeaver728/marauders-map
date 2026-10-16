@@ -75,6 +75,29 @@
     white-space:nowrap;box-shadow:inset 0 0 14px rgba(120,80,38,.3)}
   #spell:hover{background:rgba(231,213,176,.97)}
 
+  #spellbox{display:flex;gap:6px;align-items:stretch;flex:0 1 auto;min-width:0}
+  .selwrap{position:relative;display:flex;min-width:0;background:rgba(216,192,150,.9)}
+  .selwrap::after{content:'';position:absolute;right:11px;top:50%;width:7px;height:7px;pointer-events:none;
+    border-right:1.5px solid var(--ink-deep);border-bottom:1.5px solid var(--ink-deep);transform:translateY(-70%) rotate(45deg)}
+  #spellsel{-webkit-appearance:none;appearance:none;background:transparent;border:0;border-radius:0;
+    font-family:var(--prose);font-style:italic;font-size:14px;color:var(--ink-deep);
+    padding:8px 30px 8px 11px;cursor:pointer;width:100%;max-width:230px;min-width:0;text-overflow:ellipsis}
+  #spellsel:focus-visible{outline:2px solid var(--ink-deep);outline-offset:2px}
+  #spellsel option,#spellsel optgroup{font-style:normal;color:#2b1407;background:#e7d5ae}
+  #wand{width:44px;flex:0 0 44px;padding:3px;cursor:pointer;display:grid;place-items:center}
+  #wand:hover{background:rgba(231,213,176,.97)}
+  #wand:focus-visible{outline:2px solid var(--ink-deep);outline-offset:2px}
+  #wand svg{width:30px;height:30px;transition:transform .2s;overflow:visible}
+  #wand:hover svg{transform:rotate(-8deg)}
+  #wand .sparks{opacity:0;transform-origin:33px 7px;transition:opacity .25s}
+  #wand.ready .sparks{opacity:.55}
+  #wand.casting svg{animation:wandflick .5s ease}
+  #wand.casting .sparks{animation:wandspark .75s ease-out}
+  @keyframes wandflick{0%{transform:rotate(0)}35%{transform:rotate(-26deg)}70%{transform:rotate(7deg)}100%{transform:rotate(0)}}
+  @keyframes wandspark{0%{opacity:1;transform:scale(.4)}40%{opacity:1;transform:scale(1.7)}100%{opacity:0;transform:scale(2.3)}}
+  #seekwrap{z-index:2}
+  #hits{z-index:5}
+
   #card{position:fixed;z-index:40;left:50%;bottom:64px;transform:translateX(-50%) translateY(8px);
     width:min(340px,calc(100vw - 24px));padding:13px 15px 14px;display:none;opacity:0;transition:opacity .2s,transform .2s}
   #card.on{display:block;opacity:1;transform:translateX(-50%) translateY(0)}
@@ -107,12 +130,19 @@
   #swear:focus-visible{outline:2px solid #d8b071;outline-offset:3px}
   .quill{font-family:var(--ui);font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:#7a5c39;margin:0}
 
+  @media (max-width:640px){
+    #bottom{flex-wrap:wrap}
+    #spellbox{order:-1;flex:1 1 100%}
+    .selwrap{flex:1 1 auto}
+    #spellsel{max-width:none}
+    #card{bottom:112px}
+  }
   @media (max-width:520px){
-    #card{bottom:60px}
     #seekwrap{flex:1 1 auto}
   }
   @media (prefers-reduced-motion:reduce){
     #intro,#card,#toast,.fbtn{transition:none}
+    #wand svg,#wand .sparks{transition:none;animation:none!important}
   }
 </style>
 
@@ -134,7 +164,47 @@
 <div class="hud" id="bottom">
   <div id="seekwrap">
     <div class="plate" id="hits"></div>
-    <input id="seek" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Seek a name, or cast a spell&hellip;">
+    <input id="seek" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Seek a name upon the map&hellip;">
+  </div>
+  <div id="spellbox">
+    <div class="plate selwrap">
+      <select id="spellsel" aria-label="Choose a spell">
+        <option value="" selected disabled>Choose a spell&hellip;</option>
+        <optgroup label="Light and dark">
+          <option value="lumos">Lumos &mdash; light the lamps</option>
+          <option value="nox">Nox &mdash; darkness, and a wand-light</option>
+        </optgroup>
+        <optgroup label="Finding things">
+          <option value="homenum revelio">Homenum Revelio &mdash; reveal everyone</option>
+          <option value="alohomora">Alohomora &mdash; show secret passages</option>
+          <option value="accio snitch">Accio Snitch &mdash; find the Snitch</option>
+        </optgroup>
+        <optgroup label="Charms">
+          <option value="expecto patronum">Expecto Patronum &mdash; a silver stag</option>
+          <option value="wingardium leviosa">Wingardium Leviosa &mdash; float the names</option>
+          <option value="riddikulus">Riddikulus &mdash; boggart makeovers</option>
+        </optgroup>
+        <optgroup label="Jinxes">
+          <option value="petrificus totalus">Petrificus Totalus &mdash; freeze everyone</option>
+          <option value="obliviate">Obliviate &mdash; erase the footprints</option>
+        </optgroup>
+        <optgroup label="Undo">
+          <option value="finite incantatem">Finite Incantatem &mdash; end all spells</option>
+        </optgroup>
+      </select>
+    </div>
+    <button class="plate" id="wand" type="button" aria-label="Cast the chosen spell" title="Cast the spell">
+      <svg viewBox="0 0 40 40" aria-hidden="true">
+        <g class="sparks">
+          <path d="M33 1.5 L34.3 5.7 L38.5 7 L34.3 8.3 L33 12.5 L31.7 8.3 L27.5 7 L31.7 5.7Z" fill="#d9a93a"/>
+          <circle cx="37.5" cy="14" r="1.3" fill="#d9a93a"/>
+          <circle cx="25.5" cy="3" r="1.1" fill="#d9a93a"/>
+        </g>
+        <path d="M30 10 L9 31" stroke="#4a2410" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M14.5 25.5 L5.5 34.5" stroke="#2b1407" stroke-width="5" stroke-linecap="round"/>
+        <path d="M12.9 24.1 l3 3 M10.1 26.9 l3 3" stroke="#c9a670" stroke-width="1.1"/>
+      </svg>
+    </button>
   </div>
   <button class="plate" id="spell">Mischief Managed</button>
 </div>
@@ -2516,12 +2586,27 @@ function unfold(){
     setTimeout(function(){
       toast(['<b>Drag</b> to move about the castle, <b>pinch</b> or scroll to look closer.',
              'The tabs on the right take you up and down the floors. Tap any name — or any room — to see what it hides.',
-             'Try typing a spell into the search box.'],7000);
+             'Pick a spell from the list and tap the wand to cast it.'],7000);
       if(DATE_TOAST) setTimeout(function(){ toast(DATE_TOAST,8000); },7600);
     },2200);
   }
 }
 spellBtn.addEventListener('click',manageMischief);
+
+/* the spell list and the wand beside it */
+var spellSel=document.getElementById('spellsel'), wandBtn=document.getElementById('wand');
+function syncWand(){ wandBtn.classList.toggle('ready',!!spellSel.value); }
+spellSel.addEventListener('change',syncWand);
+wandBtn.addEventListener('click',function(){
+  if(!spellSel.value){
+    toast(['Choose a spell from the list first, then wave the wand.'],2800);
+    spellSel.focus();
+    return;
+  }
+  wandBtn.classList.remove('casting'); void wandBtn.offsetWidth; wandBtn.classList.add('casting');
+  closeCard();
+  cast(spellSel.value);
+});
 document.getElementById('swear').addEventListener('click',unfold);
 
 /* Snape's welcome, for anyone who taps the title three times */

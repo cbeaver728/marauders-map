@@ -56,6 +56,7 @@ Everyone re-rolls their position each time the page is opened.
 | Change floor | the tabs down the right edge, or keys `1`–`8` |
 | Identify someone | tap their name |
 | Find someone | the search box, bottom left |
+| Cast a spell | choose from the spell list, then tap the wand |
 | Put it away | *Mischief Managed* |
 
 ## Things worth finding
@@ -90,7 +91,8 @@ Everyone re-rolls their position each time the page is opened.
 
 ### Spells
 
-Type one into the search box and press Enter.
+Pick one from the spell list at the bottom of the screen and tap the wand beside it.
+If you know them by heart, you can also type a spell into the search box and press Enter.
 
 | | |
 | --- | --- |
