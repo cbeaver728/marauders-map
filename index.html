@@ -134,7 +134,7 @@
 <div class="hud" id="bottom">
   <div id="seekwrap">
     <div class="plate" id="hits"></div>
-    <input id="seek" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Seek a name upon the map&hellip;">
+    <input id="seek" type="text" autocomplete="off" autocorrect="off" spellcheck="false" placeholder="Seek a name, or cast a spell&hellip;">
   </div>
   <button class="plate" id="spell">Mischief Managed</button>
 </div>
@@ -661,6 +661,38 @@ G('barty-crouch-jr','Bartemius Crouch Jr','?','human',['defence-office','trainin
 G('regulus-black','R.A.B.','A Name on the Map','ghost',['slytherin-common','crypt'],
   {step:'ghost',speed:28,odds:.04,secret:1,fact:'I face death in the hope that when you meet your match you will be mortal once more.'});
 
+/* ---------------- OWLS ---------------- */
+G('hedwig','Hedwig','Snowy Owl','bird',['owlery','owlery','gryffindor-boys','great-hall'],
+  {step:'bird',speed:58,fact:'Snowy, proud, and better at post than anyone in the castle.'});
+G('errol','Errol','The Weasleys’ Owl, elderly','bird',['owlery','great-hall','gryffindor-common'],
+  {step:'bird',speed:22,fact:'Delivers the post eventually. Usually by colliding with it.'});
+G('pigwidgeon','Pigwidgeon','A Very Small Owl','bird',['owlery','gryffindor-boys','seventh-corridor'],
+  {step:'bird',speed:72,odds:.7,fact:'Ginny named him. Ron has never forgiven her. He is extremely excited about it.'});
+
+/* ---------------- VISITORS, AND OTHERS ---------------- */
+G('gilderoy-lockhart','Gilderoy Lockhart','Order of Merlin, Third Class','human',['defence-office','portrait-gallery','trophy-room','great-hall'],
+  {speed:34,odds:.15,fact:'Five times winner of Witch Weekly’s Most-Charming-Smile Award. Would like you to know that.'});
+G('dolores-umbridge','Dolores Umbridge','High Inquisitor','human',['defence-office','defence-classroom','headmasters-office','great-hall'],
+  {speed:30,odds:.12,fact:'Hem, hem. Educational Decree Number Twenty-Four is now in effect.'});
+G('quirinus-quirrell','Quirinus Quirrell','Defence Against the Dark Arts','human',['defence-classroom','forbidden-corridor','trapdoor-room','dungeon-corridor'],
+  {speed:30,odds:.06,secret:1,fact:'A nervous man in a large purple turban. The turban is hiding something.'});
+G('madam-rosmerta','Madam Rosmerta','Landlady, the Three Broomsticks','human',['hogsmeade-road','hogsmeade-road','front-gates'],
+  {speed:32,fact:'Butterbeer warm, gillywater cold, and gossip at any temperature.'});
+G('nymphadora-tonks','Tonks','Auror','human',['front-gates','entrance-courtyard','hogsmeade-road','covered-bridge'],
+  {speed:48,odds:.12,fact:'Do not call her Nymphadora. Her hair is a different colour every time you look.'});
+G('viktor-krum','Viktor Krum','Durmstrang, Seeker','human',['boathouse','black-lake','library','quidditch-pitch'],
+  {speed:40,odds:.14,fact:'International Quidditch star. Spends a great deal of time in the library, for some reason.'});
+G('fleur-delacour','Fleur Delacour','Beauxbatons Champion','human',['boathouse','great-hall','entrance-courtyard','black-lake'],
+  {speed:42,odds:.14,fact:'Finds the Hogwarts food very heavy. Finds Hogwarts very heavy in general.'});
+G('sorting-hat','The Sorting Hat','Patched, Frayed, Opinionated','portrait',['headmasters-office'],
+  {still:1,step:'none',fact:'Could have put Harry in Slytherin, it says. It mentions this a lot.'});
+G('dementor-1','A Dementor','Guard of Azkaban','dementor',['front-gates','hogsmeade-road','viaduct','black-lake'],
+  {step:'none',speed:24,odds:.35,nocturnal:1,fact:'Leaves no footprints. Leaves a chill. Chocolate helps afterwards.'});
+G('dementor-2','A Dementor','Guard of Azkaban','dementor',['front-gates','black-lake','covered-bridge'],
+  {step:'none',speed:22,odds:.25,nocturnal:1,fact:'The map can find them. It would rather not.'});
+G('mountain-troll','A Mountain Troll','Uninvited','giant',['crypt','dungeon-corridor','cellars','myrtles-bathroom'],
+  {step:'huge',speed:26,odds:0,fact:'Twelve feet tall, granite-grey, and lost. Somebody let it in.'});
+
 /* ================================================================
    THE CORRIDORS AS A GRAPH, AND THE WALKING OF THEM
    ================================================================ */
@@ -708,12 +740,43 @@ function corridorPts(f,A,B){
 function plen(p){var d=0;for(var i=1;i<p.length;i++)d+=Math.hypot(p[i].x-p[i-1].x,p[i].y-p[i-1].y);return d;}
 function node(id){ return NODE[id]||(NODE[id]={id:id,room:ROOM[id],edges:[]}); }
 
+/* Corridors are never quite straight in an old castle. L-bends get a sweeping
+   curve; long straight runs bow gently; secret passages wind like tunnels. */
+function curveCorridor(pts,mode){
+  var out,i,n,a,b,dx,dy,L;
+  if(pts.length===3){
+    a=pts[0]; var m=pts[1]; b=pts[2];
+    var l1=Math.hypot(m.x-a.x,m.y-a.y), l2=Math.hypot(b.x-m.x,b.y-m.y);
+    var r=Math.min(70,l1*0.45,l2*0.45);
+    if(r<8) return pts;
+    var s={x:m.x-(m.x-a.x)/l1*r, y:m.y-(m.y-a.y)/l1*r};
+    var e={x:m.x+(b.x-m.x)/l2*r, y:m.y+(b.y-m.y)/l2*r};
+    out=[a,s];
+    for(i=1;i<8;i++){ var t=i/8, u=1-t;
+      out.push({x:u*u*s.x+2*u*t*m.x+t*t*e.x, y:u*u*s.y+2*u*t*m.y+t*t*e.y}); }
+    out.push(e,b);
+    return out;
+  }
+  a=pts[0]; b=pts[pts.length-1];
+  dx=b.x-a.x; dy=b.y-a.y; L=Math.hypot(dx,dy)||1;
+  var waves=mode==='secret'?2.5:1, amp=mode==='secret'?Math.min(46,L*0.06):Math.min(12,L*0.035);
+  if(L<150&&mode!=='secret') return pts;
+  var nx=-dy/L, ny=dx/L, sgn=(MRNG()<0.5?-1:1);
+  n=mode==='secret'?40:10; out=[];
+  for(i=0;i<=n;i++){
+    var tt=i/n, off=Math.sin(tt*Math.PI*waves)*amp*sgn*(mode==='secret'?1:Math.sin(tt*Math.PI));
+    if(mode!=='secret') off=Math.sin(tt*Math.PI)*amp*sgn;
+    out.push({x:a.x+dx*tt+nx*off, y:a.y+dy*tt+ny*off});
+  }
+  return out;
+}
+
 FLOORS.forEach(function(f){
   f.wires=[];
   f.links.forEach(function(lk){
     var A=ROOM[lk[0]], B=ROOM[lk[1]];
     if(!A||!B||!A.present||!B.present) return;
-    var pts=corridorPts(f,A,B);
+    var pts=curveCorridor(corridorPts(f,A,B),lk[2]);
     f.wires.push({pts:pts,mode:lk[2],a:A,b:B});
     var walk=[{x:A.cx,y:A.cy}].concat(pts).concat([{x:B.cx,y:B.cy}]);
     walk.forEach(function(p){p.floor=f.id;});
@@ -866,6 +929,15 @@ function inRoom(r,m){
 }
 
 var CT0=ctNow(), hourNow=CT0.h, dayNow=CT0.day;
+if(CT0.month==='Oct'&&parseInt(CT0.date,10)===31){
+  CHARS.forEach(function(c){
+    if(c.id==='mountain-troll') c.odds=1;
+    if(c.id==='nearly-headless-nick') c.roam=['crypt','crypt','cellars'];
+  });
+}
+if(CT0.month==='Feb'&&parseInt(CT0.date,10)===14){
+  CHARS.forEach(function(c){ if(c.id==='gilderoy-lockhart') c.odds=1; });
+}
 CHARS.forEach(function(c){
   if(c.odds<1&&!(RNG()<c.odds)) return;
   if(c.nocturnal&&!(hourNow>=20||hourNow<6)&&!chance(.15)) return;
@@ -896,6 +968,7 @@ function wanderStep(pr){
 function updatePerson(pr,dt,h,day){
   var c=pr.def;
   if(c.still){ return; }
+  if(c.kind==='patronus'&&(!pr.path||pr.wi>=pr.path.length)) return;
   pr.replan-=dt;
   if(pr.replan<=0||pr.lastHour!==h){
     pr.lastHour=h;
@@ -987,6 +1060,27 @@ function jpoly(pts,amp,close){
   return out;
 }
 function rectPts(x,y,w,h){return [{x:x,y:y},{x:x+w,y:y},{x:x+w,y:y+h},{x:x,y:y+h}];}
+/* A room as an old builder would have left it: rounded corners and walls that
+   bow very slightly in or out. `bows` is one value in -1..1 per side (T,R,B,L),
+   shared by the outer and inner wall lines so the two stay parallel. */
+function curvyRect(x,y,w,h,rad,bows,jamp){
+  var out=[],i,n,t,b;
+  function side(x1,y1,x2,y2,nx,ny,bow){
+    var len=Math.hypot(x2-x1,y2-y1), amt=bow*Math.min(5,len*0.016);
+    n=Math.max(3,Math.round(len/34));
+    for(i=0;i<n;i++){ t=i/n; b=Math.sin(t*Math.PI)*amt;
+      out.push({x:x1+(x2-x1)*t+nx*b+jit(jamp), y:y1+(y2-y1)*t+ny*b+jit(jamp)}); }
+  }
+  function corner(cx,cy,a0){
+    for(i=0;i<5;i++){ var a=a0+i/5*Math.PI/2;
+      out.push({x:cx+Math.cos(a)*rad, y:cy+Math.sin(a)*rad}); }
+  }
+  side(x+rad,y,       x+w-rad,y,      0,-1,bows[0]); corner(x+w-rad,y+rad,  -Math.PI/2);
+  side(x+w,y+rad,     x+w,y+h-rad,    1, 0,bows[1]); corner(x+w-rad,y+h-rad, 0);
+  side(x+w-rad,y+h,   x+rad,y+h,      0, 1,bows[2]); corner(x+rad,y+h-rad,   Math.PI/2);
+  side(x,y+h-rad,     x,y+rad,       -1, 0,bows[3]); corner(x+rad,y+rad,     Math.PI);
+  return out;
+}
 function ellipsePts(cx,cy,rx,ry,n,wob){
   var out=[];n=n||34;
   for(var i=0;i<n;i++){var a=i/n*Math.PI*2,k=1+(wob?jit(wob):0);
@@ -1011,7 +1105,7 @@ function offsetPoly(pts,d){
 /* ---- geometry accumulator: everything ends up in a few Path2Ds ---- */
 function Builder(){
   this.heavy=new Path2D(); this.mid=new Path2D(); this.fine=new Path2D();
-  this.dash=new Path2D();  this.labels=[]; this.fills=[];
+  this.dash=new Path2D();  this.secret=new Path2D(); this.labels=[]; this.fills=[];
 }
 Builder.prototype.stroke=function(bucket,pts,close){
   var p=this[bucket];
@@ -1301,7 +1395,7 @@ function buildFloor(f){
   var B=new Builder();
   /* corridors first, so room walls sit on top of them */
   f.wires.forEach(function(wr){
-    var bucket=wr.mode==='secret'?'dash':'mid';
+    var bucket=wr.mode==='secret'?'secret':'mid';
     var base=jpoly(wr.pts,1.0);
     B.stroke(bucket,offsetPoly(base,13));
     B.stroke(bucket,offsetPoly(base,-13));
@@ -1324,9 +1418,31 @@ function buildFloor(f){
     }else if(r.shape==='round'){
       B.stroke('heavy',ellipsePts(r.cx,r.cy,r.w/2,r.h/2,44,0.014),1);
       B.stroke('fine',ellipsePts(r.cx,r.cy,r.w/2-7,r.h/2-7,44,0.014),1);
+      /* crenellations round the tower top */
+      var nc=Math.round((r.w+r.h)/16);
+      for(var ci=0;ci<nc;ci+=2){
+        var ca=ci/nc*6.2832, cb=(ci+1)/nc*6.2832;
+        B.stroke('fine',[
+          {x:r.cx+Math.cos(ca)*r.w/2,       y:r.cy+Math.sin(ca)*r.h/2},
+          {x:r.cx+Math.cos(ca)*(r.w/2+6),   y:r.cy+Math.sin(ca)*(r.h/2+6)},
+          {x:r.cx+Math.cos(cb)*(r.w/2+6),   y:r.cy+Math.sin(cb)*(r.h/2+6)},
+          {x:r.cx+Math.cos(cb)*r.w/2,       y:r.cy+Math.sin(cb)*r.h/2}]);
+      }
     }else{
-      B.stroke('heavy',jpoly(rectPts(r.x,r.y,r.w,r.h),1.4,1),1);
-      B.stroke('fine',jpoly(rectPts(r.x+7,r.y+7,r.w-14,r.h-14),1.1,1),1);
+      var bows=[0,1,2,3].map(function(){return (MRNG()-0.5)*2;});
+      var rad=Math.min(20,r.w*0.13,r.h*0.13);
+      B.stroke('heavy',curvyRect(r.x,r.y,r.w,r.h,rad,bows,1.0),1);
+      B.stroke('fine',curvyRect(r.x+7,r.y+7,r.w-14,r.h-14,Math.max(3,rad-6),bows,0.8),1);
+      /* corner turrets on the grander rooms */
+      if(r.w*r.h>52000&&MRNG()<0.6){
+        var cs=[[r.x,r.y],[r.x+r.w,r.y],[r.x+r.w,r.y+r.h],[r.x,r.y+r.h]];
+        var pickA=(MRNG()*4)|0, pickB=(pickA+2)%4;
+        [pickA,pickB].forEach(function(q){
+          var tx=cs[q][0]+(q===0||q===3?6:-6), ty=cs[q][1]+(q<2?6:-6);
+          B.circle('heavy',tx,ty,13,0.04);
+          B.circle('fine',tx,ty,7.5,0.05);
+        });
+      }
     }
     if(r.decor) decorate(B,r);
     B.labels.push({x:r.cx,y:r.open?r.y+16:r.cy,text:r.name,
@@ -1454,8 +1570,9 @@ function footAlpha(t){
 }
 function drawFoot(style,x,y,a,side,alpha,k){
   g.save();g.translate(x,y);g.rotate(a+Math.PI/2);g.scale(side<0?-1:1,1);g.scale(k,k);
-  g.fillStyle='rgba(48,22,7,'+alpha+')';
-  g.strokeStyle='rgba(48,22,7,'+alpha+')';
+  var fc=FOOTCOL||'48,22,7';
+  g.fillStyle='rgba('+fc+','+alpha+')';
+  g.strokeStyle='rgba('+fc+','+alpha+')';
   var i;
   switch(style){
   case 'human': case 'huge':
@@ -1504,6 +1621,10 @@ function drawFoot(style,x,y,a,side,alpha,k){
 function drawPerson(pr,k,sel){
   var st=pr.def.step;
   if(st==='none') return;
+  if(pr.def.silver){ FOOTCOL='206,222,240'; g.save(); g.shadowColor='rgba(210,228,255,0.95)'; g.shadowBlur=10; drawPersonInner(pr,k,sel,st); g.restore(); FOOTCOL=null; return; }
+  drawPersonInner(pr,k,sel,st);
+}
+function drawPersonInner(pr,k,sel,st){
   var i,t;
   for(i=0;i<pr.trail.length;i++){
     t=pr.trail[i];
@@ -1522,29 +1643,89 @@ function drawPerson(pr,k,sel){
 /* ================================================================
    NAME BANNERS
    ================================================================ */
-function banner(sx,sy,text,alpha,strong){
-  var fs=strong?12.5:10.8;
-  g.font=fs+'px "IM Fell English SC", Georgia, serif';
-  var tw=g.measureText(text).width, w=tw+26, h=fs+10, tail=7;
+/* A furled ribbon, as in the films: the body waves in a gentle S, each end
+   folds back on itself into a swallowtailed tail, and the lettering rides the
+   wave. `phase` lets each banner flutter on its own rhythm. */
+var BANNER_FS=10.8, BANNER_FS_STRONG=12.5;
+function bannerWidth(text,strong){
+  g.font=(strong?BANNER_FS_STRONG:BANNER_FS)+'px "IM Fell English SC", Georgia, serif';
+  return g.measureText(text).width+24+30;
+}
+function ribbonY(t,A){ /* cubic through +A, -1.6A, +1.6A, -A, with x linear in t */
+  var u=1-t; return u*u*u*A + 3*u*u*t*(-1.6*A) + 3*u*t*t*(1.6*A) + t*t*t*(-A);
+}
+function banner(sx,sy,text,alpha,strong,variant,phase){
+  var fs=strong?BANNER_FS_STRONG:BANNER_FS;
+  var font=(variant==='ghost'?'italic ':'')+fs+'px '+(variant==='ghost'?'"IM Fell English"':'"IM Fell English SC"')+', Georgia, serif';
+  g.font=font;
+  var tw=g.measureText(text).width, w=tw+24, h=fs+9, tl=13, dy=4.5;
+  var A=(strong?2.9:2.3)*(0.85+0.3*Math.sin(clock*1.3+(phase||0)));
+  var ink='rgba(46,21,6,'+(strong?0.95:0.82)+')';
+  var face0='rgba(236,218,180,0.97)', face1='rgba(205,174,126,0.97)', under='rgba(166,127,76,0.95)';
+  if(variant==='ghost'){ face0='rgba(232,226,212,0.9)'; face1='rgba(196,188,170,0.9)'; under='rgba(140,132,118,0.9)'; }
+  if(variant==='secret'){ under='rgba(118,52,30,0.95)'; }
+  var L=-w/2, R=w/2, T=-h/2, Bt=h/2;
   g.save();g.translate(sx,sy);g.globalAlpha=alpha;
-  /* ribbon tails */
-  g.fillStyle='rgba(178,141,90,0.9)';
+  g.lineJoin='round';g.lineWidth=1;g.strokeStyle=ink;
+
+  /* tails, behind the body: left drops, right lifts */
+  var yL=ribbonY(0,A), yR=ribbonY(1,A);
+  g.fillStyle=under;
   g.beginPath();
-  g.moveTo(-w/2,-h/2+2);g.lineTo(-w/2-tail,-h/2-3);g.lineTo(-w/2-tail,h/2+4);g.lineTo(-w/2,h/2-2);g.closePath();
-  g.moveTo(w/2,-h/2+2);g.lineTo(w/2+tail,-h/2-3);g.lineTo(w/2+tail,h/2+4);g.lineTo(w/2,h/2-2);g.closePath();
-  g.fill();
-  g.strokeStyle='rgba(48,22,7,0.85)';g.lineWidth=1;g.stroke();
-  /* body */
+  g.moveTo(L+5,T+yL+dy);
+  g.quadraticCurveTo(L-tl*0.5,T+yL+dy-2.5,L-tl,T+yL+dy+1);
+  g.lineTo(L-tl+6,(T+Bt)/2+yL+dy);
+  g.lineTo(L-tl,Bt+yL+dy+1);
+  g.quadraticCurveTo(L-tl*0.5,Bt+yL+dy+3,L+5,Bt+yL+dy);
+  g.closePath();g.fill();g.stroke();
   g.beginPath();
-  g.moveTo(-w/2,-h/2);g.lineTo(w/2,-h/2);g.lineTo(w/2-8,0);g.lineTo(w/2,h/2);
-  g.lineTo(-w/2,h/2);g.lineTo(-w/2+8,0);g.closePath();
-  var grd=g.createLinearGradient(0,-h/2,0,h/2);
-  grd.addColorStop(0,'rgba(233,214,175,0.97)');grd.addColorStop(1,'rgba(203,172,124,0.97)');
+  g.moveTo(R-5,T+yR-dy);
+  g.quadraticCurveTo(R+tl*0.5,T+yR-dy-3,R+tl,T+yR-dy-1);
+  g.lineTo(R+tl-6,(T+Bt)/2+yR-dy);
+  g.lineTo(R+tl,Bt+yR-dy-1);
+  g.quadraticCurveTo(R+tl*0.5,Bt+yR-dy+2.5,R-5,Bt+yR-dy);
+  g.closePath();g.fill();g.stroke();
+  /* the little curls where each tail tucks under */
+  g.lineWidth=0.8;
+  g.beginPath();g.arc(L-tl+2.5,T+yL+dy+3.2,2.2,Math.PI*1.1,Math.PI*2.4);g.stroke();
+  g.beginPath();g.arc(R+tl-2.5,Bt+yR-dy-3.2,2.2,Math.PI*0.1,Math.PI*1.4);g.stroke();
+  /* fold shadows, the visible underside where ribbon turns back */
+  g.fillStyle='rgba(60,30,10,0.55)';
+  g.beginPath();g.moveTo(L,Bt+yL);g.lineTo(L+5,Bt+yL+dy);g.lineTo(L+5,Bt+yL);g.closePath();g.fill();
+  g.beginPath();g.moveTo(R,T+yR);g.lineTo(R-5,T+yR-dy);g.lineTo(R-5,T+yR);g.closePath();g.fill();
+
+  /* body: top and bottom edges share one S-curve */
+  g.beginPath();
+  g.moveTo(L,T+A);
+  g.bezierCurveTo(-w/6,T-1.6*A, w/6,T+1.6*A, R,T-A);
+  g.lineTo(R,Bt-A);
+  g.bezierCurveTo(w/6,Bt+1.6*A, -w/6,Bt-1.6*A, L,Bt+A);
+  g.closePath();
+  var grd=g.createLinearGradient(0,T-A,0,Bt+A);
+  grd.addColorStop(0,face0);grd.addColorStop(0.55,face1);grd.addColorStop(1,face0);
   g.fillStyle=grd;g.fill();
-  g.lineWidth=strong?1.5:1.1;g.strokeStyle='rgba(48,22,7,'+(strong?0.95:0.8)+')';g.stroke();
-  g.fillStyle='rgba(40,18,5,0.96)';
-  g.textAlign='center';g.textBaseline='middle';
-  g.fillText(text,0,1);
+  g.lineWidth=strong?1.5:1.1;g.stroke();
+  /* engraved inner rules */
+  g.lineWidth=0.55;g.strokeStyle='rgba(46,21,6,0.45)';
+  g.beginPath();g.moveTo(L+3,T+A+2.4);g.bezierCurveTo(-w/6,T-1.6*A+2.4, w/6,T+1.6*A+2.4, R-3,T-A+2.4);g.stroke();
+  g.beginPath();g.moveTo(L+3,Bt+A-2.4);g.bezierCurveTo(-w/6,Bt-1.6*A-2.4, w/6,Bt+1.6*A-2.4, R-3,Bt-A-2.4);g.stroke();
+
+  /* lettering that follows the wave */
+  g.fillStyle='rgba(38,16,4,0.97)';
+  g.textAlign='left';g.textBaseline='middle';
+  var x=-tw/2;
+  for(var i=0;i<text.length;i++){
+    var ch=text[i], cw=g.measureText(ch).width, cxm=x+cw/2;
+    var t=(cxm-L)/w, yy=ribbonY(t,A), slope=(ribbonY(Math.min(1,t+0.02),A)-ribbonY(Math.max(0,t-0.02),A))/(0.04*w);
+    g.save();g.translate(cxm,yy+1);g.rotate(Math.atan(slope));
+    g.fillText(ch,-cw/2,0);
+    g.restore();
+    x+=cw;
+  }
+  if(variant==='birthday'){
+    g.font='11px Georgia, serif';g.textAlign='center';g.fillStyle='rgba(46,21,6,0.9)';
+    g.fillText('★',0,T-A-7);
+  }
   g.restore();
 }
 
@@ -1592,7 +1773,9 @@ function draw(){
   g.fillStyle='#221306';g.fillRect(0,0,VW,VH);
   var f=floorNow;
   g.save();
-  g.translate(VW/2,VH/2);g.scale(cam.s,cam.s);g.translate(-cam.x,-cam.y);
+  g.translate(VW/2,VH/2);
+  if(FX.shake>clock){ var sk=(FX.shake-clock)*14; g.translate((Math.random()-0.5)*sk,(Math.random()-0.5)*sk); }
+  g.scale(cam.s,cam.s);g.translate(-cam.x,-cam.y);
   drawParchment(f);
   if(reveal<1){
     var rmax=Math.hypot(f.w,f.h)*0.75;
@@ -1605,7 +1788,7 @@ function draw(){
   g.strokeStyle='rgba(84,44,18,'+(0.88*ink)+')';g.lineWidth=Math.max(1.6,1.1/cam.s);g.stroke(geo.mid);
   g.strokeStyle='rgba(100,58,26,'+(0.80*ink)+')';g.lineWidth=Math.max(0.95,0.7/cam.s);g.stroke(geo.fine);
   g.setLineDash([9,7]);
-  g.strokeStyle='rgba(100,58,26,'+(0.62*ink)+')';g.lineWidth=Math.max(1.1,0.8/cam.s);g.stroke(geo.dash);
+  g.strokeStyle='rgba(100,58,26,'+(0.62*ink)+')';g.lineWidth=Math.max(1.1,0.8/cam.s);g.stroke(geo.dash);g.stroke(geo.secret);
   g.setLineDash([]);
   /* doorways */
   g.fillStyle='rgba(213,187,143,'+ink+')';
@@ -1628,6 +1811,7 @@ function draw(){
     here.push(pr);
     drawPerson(pr,k,pr===selected);
   }
+  drawWorldFX(f,geo);
   g.restore();
 
   /* ---- screen-space lettering ---- */
@@ -1638,27 +1822,35 @@ function draw(){
     if(a===selected)return 1; if(b===selected)return -1;
     return b.def.rank-a.def.rank;
   });
-  var shown=[];
+  var shown=[], levi=FX.leviosa>clock;
   for(i=here.length-1;i>=0;i--){
     var p=here[i],sp=toScreen(p.x,p.y);
-    if(sp.x<-90||sp.x>VW+90||sp.y<-60||sp.y>VH+60) continue;
+    if(sp.x<-110||sp.x>VW+110||sp.y<-60||sp.y>VH+60) continue;
     var strong=(p===selected);
-    var fsz=strong?12.5:10.8;
-    g.font=fsz+'px "IM Fell English SC", Georgia, serif';
-    var bw=g.measureText(p.name).width+26, bh=fsz+12;
-    var by=sp.y-26-(k*10);
-    var box={x:sp.x,y:by,w:bw+8,h:bh+4};
+    var label=displayName(p);
+    var bw=bannerWidth(label,strong), bh=(strong?BANNER_FS_STRONG:BANNER_FS)+16;
+    var by=sp.y-28-(k*10);
+    if(levi) by-=14+Math.sin(clock*2.4+p.def.rank)*9;
+    var box={x:sp.x,y:by,w:bw+4,h:bh};
     if(!strong&&overlaps(box)) continue;
     labelBoxes.push(box);
-    shown.push({p:p,x:sp.x,y:by,strong:strong});
+    shown.push({p:p,x:sp.x,y:by,strong:strong,label:label,foot:sp.y});
   }
   for(i=0;i<shown.length;i++){
-    var s=shown[i];
+    var s=shown[i], v=null;
+    if(s.p.def.kind==='ghost'||s.p.def.kind==='portrait'||s.p.def.kind==='patronus'||s.p.def.kind==='dementor') v='ghost';
+    if(s.p.def.secret) v='secret';
+    if(BIRTHDAY&&BIRTHDAY.id===s.p.id) v='birthday';
     g.globalAlpha=1;
-    g.strokeStyle='rgba(48,22,7,'+(0.5*ink)+')';g.lineWidth=1;
-    g.beginPath();g.moveTo(s.x,s.y+8);g.lineTo(s.x+2,s.y+18);g.stroke();
-    banner(s.x,s.y,s.p.name,ink*(s.strong?1:0.92),s.strong);
+    /* a hairline stem from the ribbon down to the feet, with a small curl */
+    g.strokeStyle='rgba(48,22,7,'+(0.45*ink)+')';g.lineWidth=0.9;
+    g.beginPath();g.moveTo(s.x,s.y+9);
+    g.bezierCurveTo(s.x+6,s.y+14,s.x-5,s.y+18,s.x+1,Math.min(s.foot-6,s.y+24));g.stroke();
+    banner(s.x,s.y,s.label,ink*(v==='ghost'?0.8:(s.strong?1:0.93)),s.strong,v,s.p.def.rank*0.7);
+    if(s.p.say&&s.p.sayUntil>clock) speech(s.x,s.y,s.p.say,Math.min(1,(s.p.sayUntil-clock)/0.6));
   }
+  drawFloaters(f);
+  drawSnitchScreen(f);
   /* room names */
   var rf=Math.max(8.6,Math.min(15,26*cam.s));
   g.font=rf+'px "IM Fell English SC", Georgia, serif';
@@ -1682,6 +1874,7 @@ function draw(){
   var vg=g.createRadialGradient(VW/2,VH/2,Math.min(VW,VH)*0.28,VW/2,VH/2,Math.max(VW,VH)*0.78);
   vg.addColorStop(0,'rgba(30,14,4,0)');vg.addColorStop(1,'rgba(24,11,3,0.62)');
   g.fillStyle=vg;g.fillRect(0,0,VW,VH);
+  drawScreenFX();
 }
 
 function drawCartouche(f){
@@ -1712,7 +1905,8 @@ function tick(now){
   var dt=Math.max(0,Math.min(0.06,(now-last)/1000)); last=now; clock+=dt;
   if(cv.clientWidth!==VW||cv.clientHeight!==VH){ resize(); clampCam(); }
   var t=ctNow(); var h=t.h, day=t.day;
-  if(running){
+  if(!wiped) updateEggs(dt);
+  if(running&&!(FX.petrify>clock)){
     for(var i=0;i<PEOPLE.length;i++){
       var pr=PEOPLE[i];
       updatePerson(pr,dt,h,day);
@@ -1733,6 +1927,391 @@ function tick(now){
   clampCam();
   try{ draw(); }catch(err){ /* never let one bad frame stop the map */ }
   requestAnimationFrame(tick);
+}
+
+/* ================================================================
+   MISCHIEF: spells, secrets, the Snitch, and other things to find
+   ================================================================ */
+var FX={leviosa:0,petrify:0,alohomora:0,homenum:0,ridd:0,shake:0,lumos:0,nox:false};
+var wand={x:0,y:0,set:false};
+var FOOTCOL=null;
+
+/* ---- what people mutter, now and then ---- */
+var SAYS={
+ 'harry-potter':['Not again.','I solemnly swear…','Where’s Ron?'],
+ 'ron-weasley':['Bloody hell.','Why spiders? Why not butterflies?','Is it lunch yet?'],
+ 'hermione-granger':['It’s Levi-O-sa.','Honestly!','I read about it.'],
+ 'neville-longbottom':['Has anyone seen Trevor?','Mimbulus mimbletonia!'],
+ 'ginny-weasley':['Bat-Bogey, anyone?'],
+ 'fred-weasley':['Gred.','Never managed.'],
+ 'george-weasley':['Forge.','Hole in my ear. Saintlike.'],
+ 'luna-lovegood':['Nargles took my shoes.','Wrackspurts about.'],
+ 'draco-malfoy':['My father will hear about this.'],
+ 'percy-weasley':['I’m a prefect, you know.'],
+ 'oliver-wood':['Practice. At dawn.'],
+ 'albus-dumbledore':['Sherbet lemon?','Nitwit! Blubber! Oddment! Tweak!'],
+ 'minerva-mcgonagall':['Five points from Gryffindor.','Have a biscuit.'],
+ 'severus-snape':['Turn to page 394.','Obviously.','Always.'],
+ 'rubeus-hagrid':['Shouldn’ta said that.','Yer a wizard.'],
+ 'argus-filch':['Students out of bed!','Dungbombs. Again.'],
+ 'sybill-trelawney':['I see… the Grim!'],
+ 'moaning-myrtle':['Nobody likes me.','Oooooh…'],
+ 'nearly-headless-nick':['NEARLY headless.'],
+ 'dobby':['Dobby is free!','Socks!'],
+ 'horace-slughorn':['Crystallised pineapple?'],
+ 'remus-lupin':['Chocolate. It helps.'],
+ 'sir-cadogan':['Have at thee, cur!'],
+ 'fat-lady':['Laaa-la-LAAA!','Password?'],
+ 'mrs-norris':['Mrrrow.'],
+ 'gilderoy-lockhart':['Order of Merlin, Third Class!','Autographs later.'],
+ 'dolores-umbridge':['Hem, hem.'],
+ 'fang':['Woof.'],
+ 'filius-flitwick':['Swish and flick!'],
+ 'pomona-sprout':['Earmuffs on!'],
+ 'cuthbert-binns':['…the goblin rebellions…'],
+ 'luna':[]
+};
+var nextSay=4;
+
+/* ---- Riddikulus: the boggarts get their makeovers ---- */
+var RIDD={
+ 'severus-snape':'Snape, in a Vulture Hat','argus-filch':'Filch, in a Tutu',
+ 'draco-malfoy':'Draco, a Ferret','aragog':'Aragog, on Roller Skates',
+ 'peeves':'Peeves, Politely Silent','the-giant-squid':'The Giant Squid, in a Bow Tie',
+ 'mrs-norris':'Mrs Norris, Purring','fluffy':'Fluffy, Snoring',
+ 'dolores-umbridge':'Umbridge, in a Kitten Plate','gilderoy-lockhart':'Lockhart, Bald',
+ 'minerva-mcgonagall':'McGonagall, a Tabby Cat','bloody-baron':'The Baron, Giggling',
+ 'quirinus-quirrell':'Quirrell, Turban Askew','grawp':'Grawp, in a Tiara',
+ 'sybill-trelawney':'Trelawney, Who Saw This Coming'
+};
+function displayName(p){
+  if(FX.ridd>clock&&RIDD[p.id]) return RIDD[p.id];
+  return p.name;
+}
+
+/* ---- speech, in a quick hand beside the ribbon ---- */
+function speech(x,y,text,a){
+  g.save();
+  g.globalAlpha=Math.max(0,a)*ink;
+  g.font='italic 13px "IM Fell English", Georgia, serif';
+  g.textAlign='left';g.textBaseline='middle';
+  var tw=g.measureText(text).width, bx=x+18, by=y-22;
+  if(bx+tw+10>VW) bx=x-18-tw;
+  g.strokeStyle='rgba(46,21,6,0.55)';g.lineWidth=0.8;
+  g.beginPath();g.moveTo(x+(bx>x?10:-10),y-8);g.quadraticCurveTo(x+(bx>x?14:-14),by+4,bx+(bx>x?-3:tw+3),by+2);g.stroke();
+  g.fillStyle='rgba(38,16,4,0.92)';
+  g.fillText('“'+text+'”',bx,by);
+  g.restore();
+}
+
+/* ---- ink that appears out of nowhere: Peeves, and the occasional owl ---- */
+var floaters=[], nextPeeves=6, nextErrol=20;
+var PEEVES_WORDS=['CRASH!','Wheeee!','Oi!','KABOOM!','Ickle firsties!','Ooops.','SPLAT!','Tee-hee!'];
+function floater(floor,x,y,text,big){
+  floaters.push({floor:floor,x:x,y:y,text:text,born:clock,rot:(Math.random()-0.5)*0.4,big:big});
+}
+function drawFloaters(f){
+  for(var i=floaters.length-1;i>=0;i--){
+    var fl=floaters[i], age=clock-fl.born;
+    if(age>2.8){floaters.splice(i,1);continue;}
+    if(fl.floor!==f.id) continue;
+    var s=toScreen(fl.x,fl.y), a=age<0.2?age/0.2:Math.max(0,1-(age-1.4)/1.4);
+    g.save();g.translate(s.x+18,s.y-30-age*16);g.rotate(fl.rot);
+    g.globalAlpha=a*ink;
+    g.font=(fl.big?'22px':'16px')+' "IM Fell English SC", Georgia, serif';
+    g.textAlign='center';g.textBaseline='middle';
+    g.fillStyle='rgba(70,24,8,0.95)';g.fillText(fl.text,0,0);
+    g.restore();
+  }
+}
+
+/* ---- the Golden Snitch ---- */
+var snitch={floor:'grounds',x:2000,y:240,vx:0,vy:0,next:0,away:0,hidden:0,home:'quidditch-pitch'};
+function updateSnitch(dt){
+  if(snitch.hidden>clock) return;
+  var homeR=ROOM[snitch.home];
+  if(snitch.away&&clock>snitch.away){ /* back to the pitch */
+    snitch.away=0; snitch.floor='grounds'; snitch.x=homeR.cx; snitch.y=homeR.cy;
+  }else if(!snitch.away&&clock>30&&Math.random()<dt/60){ /* off for a wander */
+    var others=FLOORS.filter(function(fl){return fl.id!=='grounds';});
+    var fl=others[(Math.random()*others.length)|0];
+    var rooms=fl.rooms.filter(function(r){return r.present;});
+    var rr0=rooms[(Math.random()*rooms.length)|0];
+    snitch.floor=fl.id; snitch.x=rr0.cx; snitch.y=rr0.cy; snitch.away=clock+35;
+  }
+  if(clock>snitch.next){
+    var sp=120+Math.random()*260, an=Math.random()*6.2832;
+    snitch.vx=Math.cos(an)*sp; snitch.vy=Math.sin(an)*sp;
+    snitch.next=clock+0.3+Math.random()*1.4;
+  }
+  /* it never strays far from wherever it has decided to be */
+  var F2=null; for(var i=0;i<FLOORS.length;i++) if(FLOORS[i].id===snitch.floor) F2=FLOORS[i];
+  var cxh=snitch.floor==='grounds'?homeR.cx:F2.w/2, cyh=snitch.floor==='grounds'?homeR.cy:F2.h/2;
+  var reach=snitch.floor==='grounds'?260:420;
+  if(Math.hypot(snitch.x-cxh,snitch.y-cyh)>reach){ snitch.vx+=(cxh-snitch.x)*dt*2; snitch.vy+=(cyh-snitch.y)*dt*2; }
+  snitch.x+=snitch.vx*dt; snitch.y+=snitch.vy*dt;
+}
+function drawSnitchScreen(f){
+  if(snitch.hidden>clock||snitch.floor!==f.id) return;
+  var s=toScreen(snitch.x,snitch.y);
+  if(s.x<-20||s.x>VW+20||s.y<-20||s.y>VH+20) return;
+  var flap=Math.sin(clock*55);
+  g.save();g.translate(s.x,s.y);g.globalAlpha=ink;
+  g.fillStyle='rgba(230,226,205,0.85)';g.strokeStyle='rgba(60,40,10,0.7)';g.lineWidth=0.7;
+  for(var sd=-1;sd<=1;sd+=2){
+    g.save();g.scale(sd,1);g.rotate(-0.5+flap*0.45);
+    g.beginPath();g.ellipse(9,-1,8,2.6,-0.25,0,6.2832);g.fill();g.stroke();
+    g.restore();
+  }
+  var gr=g.createRadialGradient(-1.2,-1.2,0.4,0,0,4.2);
+  gr.addColorStop(0,'#fff3b0');gr.addColorStop(0.5,'#e2b23a');gr.addColorStop(1,'#8a5a10');
+  g.fillStyle=gr;g.beginPath();g.arc(0,0,4,0,6.2832);g.fill();
+  g.restore();
+}
+function trySnitch(sx,sy){
+  if(snitch.hidden>clock||snitch.floor!==floorNow.id) return false;
+  var s=toScreen(snitch.x,snitch.y);
+  if(Math.hypot(s.x-sx,s.y-sy)>30) return false;
+  var houses=['Gryffindor','Slytherin','Ravenclaw','Hufflepuff'];
+  toast(['<b>You caught the Golden Snitch!</b>','One hundred and fifty points to '+houses[(Math.random()*4)|0]+'.',
+         'There is something written on it, very small: <i>I open at the close.</i>'],7000);
+  snitch.hidden=clock+90; snitch.away=0; snitch.floor='grounds';
+  snitch.x=ROOM[snitch.home].cx; snitch.y=ROOM[snitch.home].cy;
+  return true;
+}
+
+/* ---- Expecto Patronum: a silver stag crosses the floor ---- */
+function patronus(){
+  var f=floorNow, y=f.h*(0.25+Math.random()*0.5), ltr=Math.random()<0.5;
+  var t=ctNow();
+  var pr={def:{id:'patronus',name:'Prongs',step:'hoof',speed:210,kind:'patronus',rank:999,silver:1,
+               role:'A Patronus',fact:'A silver stag. Some say his father was one, too.'},
+          id:'patronus',name:'Prongs',x:ltr?-60:f.w+60,y:y,floor:f.id,room:null,dest:null,
+          path:[{x:ltr?f.w*0.35:f.w*0.65,y:y+(Math.random()-0.5)*120,floor:f.id},
+                {x:ltr?f.w*0.7:f.w*0.3,y:y+(Math.random()-0.5)*160,floor:f.id},
+                {x:ltr?f.w+80:-80,y:y,floor:f.id}],
+          wi:0,wait:0,trail:[],since:0,heading:ltr?0:Math.PI,replan:1e9,lastHour:t.h,acc:0,side:1,temp:clock+16};
+  pr.room=null; PEOPLE.push(pr);
+}
+
+/* ---- the things rooms will tell you, if you tap them ---- */
+var GARGOYLE=['Sherbet Lemon','Cockroach Cluster','Fizzing Whizbee','Acid Pop','Toffee Éclair','Chocolate Frog','Dumbledore'];
+var FATLADY=['Caput Draconis','Pig Snout','Fortuna Major','Balderdash','Mimbulus Mimbletonia','Banana Fritters','Abstinence','Baubles'];
+var loreIdx={};
+function moonName(){
+  var ph=moonPhase(new Date());
+  if(ph<0.03||ph>0.97) return 'a new moon, barely there';
+  if(ph<0.22) return 'a waxing crescent';
+  if(ph<0.28) return 'a first-quarter moon';
+  if(ph<0.47) return 'a waxing gibbous';
+  if(ph<0.53) return 'a full moon. Professor Lupin has gone to bed early';
+  if(ph<0.72) return 'a waning gibbous';
+  if(ph<0.78) return 'a last-quarter moon';
+  return 'a waning crescent';
+}
+var ROOMLORE={
+ 'great-hall':function(){
+   var h=ctNow().h, sky;
+   if(h<5||h>=21) sky='a black sky thick with stars';
+   else if(h<8) sky='a pale dawn, pink at the edges';
+   else if(h<17) sky='clouds drifting over a bright sky';
+   else sky='a sunset going gold, then violet';
+   return ['<b>The Great Hall.</b>','The ceiling is bewitched to look like the sky outside. Right now it shows '+sky+', with candles floating beneath it.'];},
+ 'entrance-hall':function(){
+   var hs=['Gryffindor','Slytherin','Ravenclaw','Hufflepuff'],pts=hs.map(function(){return 120+((Math.random()*360)|0);});
+   var best=pts.indexOf(Math.max.apply(null,pts));
+   return ['<b>The House Hourglasses.</b>',hs.map(function(n,i){return n+' '+pts[i];}).join(' · '),hs[best]+' are ahead, for now.'];},
+ 'headmasters-office':function(){return ['<b>The Stone Gargoyle.</b>','Today’s password is <i>'+GARGOYLE[new Date().getDate()%GARGOYLE.length]+'</i>.'];},
+ 'gargoyle':function(){return ROOMLORE['headmasters-office']();},
+ 'fat-lady':function(){return ['<b>The Fat Lady.</b>','This week’s password is <i>'+FATLADY[Math.floor(Date.now()/6048e5)%FATLADY.length]+'</i>. Do not tell Neville; he writes them down.'];},
+ 'gryffindor-common':function(){return ROOMLORE['fat-lady']();},
+ 'kitchens':['<b>The Kitchens.</b>','Tickle the pear in the painting of the fruit bowl. It giggles, then turns into a green door handle.'],
+ 'room-of-requirement':['<b>The Room of Requirement.</b>','Walk past the wall three times, thinking hard about what you need.','Today it looks like a hiding place for lost things. There is a vanishing cabinet in the corner. Leave it alone.'],
+ 'barnabas-tapestry':['<b>Barnabas the Barmy.</b>','He is trying to teach trolls to dance ballet. The trolls are not enjoying it.'],
+ 'disused-classroom':['<b>The Mirror of Erised.</b>','Carved round the top: <i>Erised stra ehru oyt ube cafru oyt on wohsi.</i>','Read it backwards. Then perhaps stop looking.'],
+ 'myrtles-bathroom':['<b>OUT OF ORDER.</b>','It has been out of order for about fifty years. One of the taps has a tiny snake scratched into it.'],
+ 'chamber-entrance':['<b>The Chamber of Secrets.</b>','The sink only moves for someone who speaks to it in Parseltongue. It is a very long way down.'],
+ 'forbidden-corridor':['<b>The Third-Floor Corridor.</b>','Out of bounds this year to anybody who would rather not die a most painful death. Something large is snoring.'],
+ 'trapdoor-room':['<b>The Trapdoor.</b>','A harp is playing itself beside it. Whatever you do, keep the music going.'],
+ 'one-eyed-witch':['<b>The One-Eyed Witch.</b>','Tap her hump with your wand and say <i>Dissendium</i>. The passage comes out in Honeydukes’ cellar.'],
+ 'trophy-room':['<b>The Trophy Room.</b>','A shield for Special Services to the School, awarded to one T. M. Riddle. Ron once polished it for an hour after a slug incident.'],
+ 'prefects-bathroom':['<b>The Prefects’ Bathroom.</b>','The password is <i>Pine-fresh</i>. A hundred taps, each a different bubble bath. Open the egg underwater.'],
+ 'hagrid-hut':['<b>Hagrid’s Hut.</b>','There are rock cakes on the table. They are aptly named.','Something in a crate in the corner is moving.'],
+ 'whomping-willow':['<b>The Whomping Willow.</b>','Press the knot at the base of the trunk to freeze it. Do not, under any circumstances, park a car in it.'],
+ 'shrieking-shack':['<b>The Shrieking Shack.</b>','The most haunted building in Britain, say the villagers. Only four people know exactly why.'],
+ 'quidditch-pitch':['<b>The Quidditch Pitch.</b>','Somewhere about the pitch is a walnut-sized golden ball with wings. Catch it, if you are quick.'],
+ 'owlery':['<b>The Owlery.</b>','Hundreds of owls, most of them asleep. A snowy one is watching you and is not impressed.'],
+ 'library':['<b>The Library.</b>','Tens of thousands of books, thousands of shelves. Hogwarts: A History is checked out, as usual.'],
+ 'restricted-section':['<b>The Restricted Section.</b>','One of the books in here screams when it is opened. You will not need to ask which.'],
+ 'north-tower':function(){
+   var leaves=['a falcon: a deadly enemy','a club: an attack','a skull: danger in your path','an acorn: a windfall of gold','the Grim. My dear, the Grim'];
+   return ['<b>Divination.</b>','Professor Trelawney swirls your cup and peers in. She sees '+leaves[(Math.random()*leaves.length)|0]+'.'];},
+ 'astronomy-tower':function(){return ['<b>The Astronomy Tower.</b>','Tonight the sky has '+moonName()+'.'];},
+ 'clock-tower':function(){var t=ctNow();return ['<b>The Clock Tower.</b>','The great clock reads '+pad(t.h)+':'+pad(t.m)+'. Its pendulum swings over the courtyard below.'];},
+ 'hospital-wing':['<b>The Hospital Wing.</b>','A bottle of Skele-Gro on the bedside table. It burns going down, and the night is long.'],
+ 'greenhouses':['<b>Greenhouse Three.</b>','Mandrakes. Earmuffs on, please, and pot them firmly.'],
+ 'snape-office':['<b>Professor Snape’s Office.</b>','Jars of slimy things in coloured potions. Someone has been in his private stores again: the boomslang skin is short.'],
+ 'potions-classroom':['<b>The Potions Classroom.</b>','A bezoar is a stone from the stomach of a goat. It will save you from most poisons. Write that down.'],
+ 'storerooms':['<b>The Store Rooms.</b>','Gillyweed, lacewing flies, powdered bicorn horn. Most of it is labelled. Some of it is moving.'],
+ 'black-lake':['<b>The Black Lake.</b>','Merpeople below, a giant squid above, and one stone house under the water with a very good view.'],
+ 'front-gates':['<b>The Front Gates.</b>','Two stone pillars, each topped by a winged boar.'],
+ 'hogsmeade-road':['<b>The Road to Hogsmeade.</b>','Honeydukes, Zonko’s, and the Three Broomsticks, where the butterbeer is warm and Madam Rosmerta is warmer.'],
+ 'forbidden-forest':['<b>The Forbidden Forest.</b>','Forbidden. It is right there in the name.'],
+ 'broom-cupboard':['<b>A Broom Cupboard.</b>','A boy once lived in one smaller than this. He has done rather better since.'],
+ 'staff-room':['<b>The Staff Room.</b>','The old wardrobe rattles now and then. There is a boggart in it.'],
+ 'defence-classroom':['<b>Defence Against the Dark Arts.</b>','No teacher of this subject has lasted longer than a year. The job is jinxed.'],
+ 'history-classroom':['<b>History of Magic.</b>','Goblin rebellions, chapter fourteen. Again. Someone at the back is asleep. Everyone at the back is asleep.'],
+ 'charms-classroom':['<b>The Charms Classroom.</b>','Swish and flick. A feather floats near the ceiling, and another is on fire.'],
+ 'transfiguration':['<b>Transfiguration.</b>','There is a tabby cat sitting very straight on the teacher’s desk. Be on time.'],
+ 'crypt':['<b>The Old Crypt.</b>','Black candles, rotten fish, and a cake shaped like a tombstone. Someone has had a Deathday party.'],
+ 'slytherin-common':['<b>The Slytherin Common Room.</b>','Green lamps and a window onto the bottom of the lake. Every so often the squid goes past.'],
+ 'hufflepuff-basement':['<b>The Hufflepuff Common Room.</b>','Tap the barrels in the rhythm of Helga Hufflepuff. Get it wrong and they douse you in vinegar.'],
+ 'ravenclaw-common':['<b>Ravenclaw Tower.</b>','The eagle knocker asks: which came first, the phoenix or the flame? It wants an argument, not an answer.'],
+ 'ravenclaw-stair':function(){return ROOMLORE['ravenclaw-common'];},
+ 'pumpkin-patch':['<b>The Pumpkin Patch.</b>','Hagrid has been helping these along with an Engorgement Charm. One is the size of a garden shed.'],
+ 'boathouse':['<b>The Boathouse.</b>','First years cross the lake by boat on their first night. No more than four to a boat.'],
+ 'classroom-eleven':['<b>Classroom Eleven.</b>','The floor is moss and the ceiling is a night sky. Firenze teaches here, among trees.'],
+ 'covered-bridge':['<b>The Covered Bridge.</b>','A long way down, and the boards creak. A good place to say something difficult.'],
+ 'stone-circle':['<b>The Stone Circle.</b>','Nobody remembers who put these here. The stones are not telling.'],
+ 'viaduct':['<b>The Viaduct.</b>','On the far side, a hundred feet down, a river. On this side, a castle.'],
+ 'filch-office':['<b>Filch’s Office.</b>','A filing cabinet labelled <i>Confiscated and Highly Dangerous</i>. A blank bit of parchment was once in it.']
+};
+ROOMLORE['ravenclaw-stair']=ROOMLORE['ravenclaw-common'];
+function roomAtWorld(f,x,y){
+  var openHit=null;
+  for(var i=f.rooms.length-1;i>=0;i--){
+    var r=f.rooms[i]; if(!r.present) continue;
+    if(x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h){ if(r.open){ if(!openHit) openHit=r; } else return r; }
+  }
+  return openHit;
+}
+function roomTap(sx,sy){
+  var w=toWorld(sx,sy), r=roomAtWorld(floorNow,w.x,w.y);
+  if(!r) return false;
+  var lore=ROOMLORE[r.id];
+  if(!lore) return false;
+  if(typeof lore==='function') lore=lore();
+  toast(lore,7500);
+  if(r.id==='whomping-willow') FX.shake=clock+0.7;
+  return true;
+}
+
+/* ---- spells, typed into the search box ---- */
+function cast(raw){
+  var s=raw.toLowerCase().replace(/[^a-z ]/g,'').replace(/\s+/g,' ').trim();
+  if(!s) return false;
+  if(s==='lumos'||s==='lumos maxima'){ FX.nox=false; FX.lumos=clock+0.9; toast(['<i>Lumos.</i>','The parchment brightens.'],2600); return true; }
+  if(s==='nox'){ FX.nox=true; toast(['<i>Nox.</i>','Your wand is the only light now. Move it about the map. <i>Lumos</i> to bring the lamps back.'],5000); return true; }
+  if(s==='alohomora'){ FX.alohomora=clock+9; toast(['<i>Alohomora.</i>','Every secret passage and hidden room on this floor is glowing, briefly.'],5000); return true; }
+  if(s==='homenum revelio'){
+    FX.homenum=clock+4;
+    var n=PEOPLE.filter(function(p){return p.floor===floorNow.id;}).length;
+    toast(['<i>Homenum Revelio.</i>',n+' souls on '+stripAmp(floorNow.name).replace(/^The /,'the ')+'.'],4000); return true; }
+  if(s==='obliviate'){ PEOPLE.forEach(function(p){p.trail.length=0;}); toast(['<i>Obliviate.</i>','Every footprint, forgotten.'],3000); return true; }
+  if(s==='expecto patronum'){ patronus(); toast(['<i>Expecto Patronum!</i>'],2400); return true; }
+  if(s==='wingardium leviosa'){ FX.leviosa=clock+10; toast(['<i>Wingardium Leviosa.</i>','It’s Levi-<b>O</b>-sa, not Levi-o-<b>SA</b>.'],3500); return true; }
+  if(s==='riddikulus'){ FX.ridd=clock+15; toast(['<i>Riddikulus!</i>','Laughter is the thing that finishes a boggart.'],3500); return true; }
+  if(s==='petrificus totalus'){ FX.petrify=clock+8; toast(['<i>Petrificus Totalus.</i>','Everyone on the map has gone stiff as a board.'],3500); return true; }
+  if(s==='finite incantatem'||s==='finite'){ FX.leviosa=FX.petrify=FX.ridd=FX.alohomora=FX.homenum=0;FX.nox=false; toast(['<i>Finite Incantatem.</i>','All spells ended.'],2500); return true; }
+  if(s==='mischief managed'){ manageMischief(); return true; }
+  if(s.indexOf('i solemnly swear')===0){ toast(['You already have, rather obviously.'],2500); return true; }
+  if(s==='avada kedavra'||s==='crucio'||s==='imperio'){ toast(['<b>That is an Unforgivable Curse.</b>','Fifty points from your house, and detention with Filch.'],4000); return true; }
+  if(s==='accio snitch'||s==='accio golden snitch'){
+    if(snitch.hidden>clock){ toast(['The Snitch has already been caught. It will be back.'],3000); return true; }
+    setFloor(floorIndex(snitch.floor),true); flyTo(snitch.x,snitch.y,Math.max(cam.s,1.6));
+    toast(['<i>Accio Snitch.</i>','It will not come to you. But there it is.'],3500); return true; }
+  if(s.indexOf('accio ')===0){
+    var q=s.slice(6);
+    var hit=PEOPLE.filter(function(p){return p.name.toLowerCase().indexOf(q)>=0;})[0];
+    if(!hit){ toast(['<i>Accio '+q+'.</i>','Nothing comes. Nobody by that name is on the map.'],3000); return true; }
+    setFloor(floorIndex(hit.floor),true); flyTo(hit.x,hit.y,Math.max(cam.s,1.25)); showCard(hit); return true; }
+  return false;
+}
+
+/* ---- dates the castle remembers (Central Time) ---- */
+var BIRTHDAYS={'Jul 31':'harry-potter','Mar 1':'ron-weasley','Sep 19':'hermione-granger','Jul 30':'neville-longbottom',
+  'Aug 11':'ginny-weasley','Feb 13':'luna-lovegood','Jun 5':'draco-malfoy','Dec 6':'rubeus-hagrid',
+  'Mar 10':'remus-lupin','Jan 9':'severus-snape','Oct 4':'minerva-mcgonagall','Nov 3':'sirius-black','Dec 31':'tom-riddle'};
+var BIRTHDAY=null, DATE_TOAST=null;
+(function(){
+  var t=ctNow(), md=t.month+' '+parseInt(t.date,10);
+  if(BIRTHDAYS[md]){
+    var bid=BIRTHDAYS[md], who=BYID[bid];
+    BIRTHDAY={id:bid};
+    var nm=who?who.name:CHARS.filter(function(c){return c.id===bid;})[0].name;
+    DATE_TOAST=['<b>Today is '+nm+'’s birthday.</b>', who?'Look for the star over the ribbon.':'Wherever they are, they are not on the map today.'];
+  }
+  if(md==='Apr 1'){
+    var fr=BYID['fred-weasley'], ge=BYID['george-weasley'];
+    if(fr&&ge){ fr.name='George Weasley'; ge.name='Fred Weasley'; }
+    DATE_TOAST=['<b>The first of April.</b>','The twins’ birthday. They have swapped names on the map, and Mum will never know.'];
+  }
+  if(md==='Oct 31') DATE_TOAST=['<b>TROLL — IN THE DUNGEONS!</b>','Thought you ought to know. Happy Hallowe’en. Nearly Headless Nick is holding his Deathday party in the crypt.'];
+  if(md==='Sep 1') DATE_TOAST=['<b>The first of September.</b>','The Hogwarts Express leaves King’s Cross at eleven. The Sorting is tonight.'];
+  if(md==='May 2') DATE_TOAST=['<b>The second of May.</b>','The castle remembers the battle that was fought here. The map is quieter today.'];
+  if(md==='Feb 14') DATE_TOAST=['<b>Valentine’s Day.</b>','Professor Lockhart has hired dwarves in wings to deliver singing cards. Hide.'];
+  if(t.month==='Dec'&&parseInt(t.date,10)>=18) DATE_TOAST=DATE_TOAST||['<b>Christmas at Hogwarts.</b>','Twelve trees in the Great Hall, snow on the grounds, and a jumper with your initial on it.'];
+  if(!DATE_TOAST&&FULLMOON&&(t.h>=20||t.h<6)) DATE_TOAST=['<b>The moon is full tonight.</b>','Professor Lupin is unwell. Stay clear of the Whomping Willow.'];
+})();
+
+/* ---- everything above, one tick at a time ---- */
+function updateEggs(dt){
+  updateSnitch(dt);
+  /* people mutter */
+  if(clock>nextSay){
+    nextSay=clock+6+Math.random()*7;
+    var cands=PEOPLE.filter(function(p){
+      if(p.floor!==floorNow.id||!SAYS[p.id]||!SAYS[p.id].length) return false;
+      var s=toScreen(p.x,p.y); return s.x>40&&s.x<VW-40&&s.y>60&&s.y<VH-60;});
+    if(cands.length){ var p=cands[(Math.random()*cands.length)|0];
+      p.say=SAYS[p.id][(Math.random()*SAYS[p.id].length)|0]; p.sayUntil=clock+3.8; }
+  }
+  /* Peeves makes himself known */
+  if(clock>nextPeeves){
+    nextPeeves=clock+5+Math.random()*8;
+    var pv=BYID['peeves'];
+    if(pv&&!wiped) floater(pv.floor,pv.x,pv.y,PEEVES_WORDS[(Math.random()*PEEVES_WORDS.length)|0],Math.random()<0.3);
+  }
+  if(clock>nextErrol){
+    nextErrol=clock+25+Math.random()*30;
+    var er=BYID['errol'];
+    if(er&&Math.random()<0.6) floater(er.floor,er.x,er.y,'THUD.',false);
+  }
+  /* a Patronus fades once it has left */
+  for(var i=PEOPLE.length-1;i>=0;i--){
+    var q=PEOPLE[i];
+    if(q.temp&&clock>q.temp){ PEOPLE.splice(i,1); if(selected===q) closeCard(); }
+  }
+}
+function drawWorldFX(f,geo){
+  if(FX.alohomora>clock){
+    var pulse=0.55+0.45*Math.sin(clock*5);
+    g.save();g.setLineDash([9,7]);g.lineDashOffset=-clock*30;
+    g.strokeStyle='rgba(176,58,26,'+(0.85*pulse*ink)+')';g.lineWidth=Math.max(3,2.2/cam.s);
+    g.stroke(geo.secret);
+    g.setLineDash([4,5]);g.lineWidth=Math.max(1.6,1.2/cam.s);
+    f.rooms.forEach(function(r){ if(r.secret&&r.present){ g.beginPath();g.roundRect?g.roundRect(r.x-10,r.y-10,r.w+20,r.h+20,18):g.rect(r.x-10,r.y-10,r.w+20,r.h+20);g.stroke(); } });
+    g.restore();
+  }
+  if(FX.homenum>clock){
+    var age=4-(FX.homenum-clock);
+    g.save();g.strokeStyle='rgba(70,24,8,'+Math.max(0,0.7-age*0.17)+')';g.lineWidth=Math.max(1.4,1.2/cam.s);
+    for(var i=0;i<PEOPLE.length;i++){ var p=PEOPLE[i]; if(p.floor!==f.id) continue;
+      for(var r=0;r<2;r++){ var rad=((age*60+r*40)%120)+6;
+        g.beginPath();g.arc(p.x,p.y,rad,0,6.2832);g.stroke(); } }
+    g.restore();
+  }
+}
+function drawScreenFX(){
+  if(FX.nox){
+    var wx=wand.set?wand.x:VW/2, wy=wand.set?wand.y:VH/2;
+    var gr=g.createRadialGradient(wx,wy,20,wx,wy,Math.max(170,Math.min(VW,VH)*0.32));
+    gr.addColorStop(0,'rgba(12,6,2,0)');gr.addColorStop(0.7,'rgba(12,6,2,0.55)');gr.addColorStop(1,'rgba(10,5,1,0.9)');
+    g.fillStyle=gr;g.fillRect(0,0,VW,VH);
+  }
+  if(FX.lumos>clock){
+    g.fillStyle='rgba(255,236,190,'+(0.55*(FX.lumos-clock)/0.9)+')';g.fillRect(0,0,VW,VH);
+  }
 }
 
 /* ================================================================
@@ -1758,7 +2337,7 @@ function floorIndex(id){for(var i=0;i<FLOORS.length;i++)if(FLOORS[i].id===id)ret
 /* ---------------- pan, pinch, zoom ---------------- */
 var ptrs={}, nptr=0, moved=0, pinch=null;
 cv.addEventListener('pointerdown',function(e){
-  cv.setPointerCapture(e.pointerId);
+  try{ cv.setPointerCapture(e.pointerId); }catch(err){}
   ptrs[e.pointerId]={x:e.clientX,y:e.clientY};
   nptr++; moved=0; camGoal=null;
   if(nptr===2) startPinch();
@@ -1772,6 +2351,7 @@ function startPinch(){
          w:toWorld(mid.x-r.left,mid.y-r.top)};
 }
 cv.addEventListener('pointermove',function(e){
+  var rr0=cv.getBoundingClientRect(); wand.x=e.clientX-rr0.left; wand.y=e.clientY-rr0.top; wand.set=true;
   var p=ptrs[e.pointerId]; if(!p) return;
   var dx=e.clientX-p.x, dy=e.clientY-p.y;
   p.x=e.clientX; p.y=e.clientY;
@@ -1836,7 +2416,10 @@ function hitTest(sx,sy){
     d=Math.min(d,d2);
     if(d<bd){bd=d;best=p;}
   }
-  if(best&&bd<46) showCard(best); else closeCard();
+  if(trySnitch(sx,sy)) return;
+  if(best&&bd<46){ showCard(best); return; }
+  closeCard();
+  roomTap(sx,sy);
 }
 var SECRETS={
  'peter-pettigrew':['<b>Wormtail.</b>','The map is never wrong. It was made by four boys who knew exactly what they were doing, and one of them is standing in Gryffindor Tower right now.'],
@@ -1845,7 +2428,8 @@ var SECRETS={
  'barty-crouch-jr':['<b>Bartemius Crouch Jr.</b>','He is standing in a room where somebody else ought to be standing. Look again at the name.'],
  'nicolas-flamel':['<b>Nicolas Flamel.</b>','Six hundred and sixty-five years old, and at the front gates for a quiet word with an old friend.'],
  'nagini':['<b>Nagini.</b>','Something long is moving through the Forest that the Forest did not raise.'],
- 'regulus-black':['<b>R.A.B.</b>','A name in the dungeons that the map has no business knowing.']
+ 'regulus-black':['<b>R.A.B.</b>','A name in the dungeons that the map has no business knowing.'],
+ 'quirinus-quirrell':['<b>Quirinus Quirrell.</b>','The map shows one name. Look closely at the footprints: there are rather more of him than there ought to be.']
 };
 function showCard(p){
   selected=p;
@@ -1903,6 +2487,13 @@ function renderHits(q){
   hits.classList.add('on');
 }
 seek.addEventListener('input',function(){renderHits(seek.value.trim());});
+seek.addEventListener('keydown',function(e){
+  if(e.key!=='Enter') return;
+  e.preventDefault();
+  if(cast(seek.value)){ seek.value=''; hits.classList.remove('on'); seek.blur(); return; }
+  var first=hits.querySelector('.hit');
+  if(first&&hits.classList.contains('on')) first.click();
+});
 seek.addEventListener('focus',function(){if(seek.value.trim())renderHits(seek.value.trim());});
 document.addEventListener('pointerdown',function(e){
   if(!document.getElementById('seekwrap').contains(e.target)) hits.classList.remove('on');
@@ -1924,7 +2515,9 @@ function unfold(){
     sworn=true;
     setTimeout(function(){
       toast(['<b>Drag</b> to move about the castle, <b>pinch</b> or scroll to look closer.',
-             'The tabs on the right take you up and down the floors. Tap any name to see who it is.'],7000);
+             'The tabs on the right take you up and down the floors. Tap any name — or any room — to see what it hides.',
+             'Try typing a spell into the search box.'],7000);
+      if(DATE_TOAST) setTimeout(function(){ toast(DATE_TOAST,8000); },7600);
     },2200);
   }
 }

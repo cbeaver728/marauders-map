@@ -72,6 +72,40 @@ Everyone re-rolls their position each time the page is opened.
   Lupin goes to the Shrieking Shack — the passage under the Whomping Willow is on the map.
 - The One-Eyed Witch connects to the road to Hogsmeade, by way of a cellar.
 - Trevor is lost somewhere different every time.
+- **Tap a room**, not just a person. Around fifty of them have something to say: the
+  Great Hall's ceiling shows the real sky for the hour, the gargoyle gives today's
+  password, the Fat Lady gives this week's, the Astronomy Tower reports the actual moon
+  phase, the Entrance Hall tallies house points. Don't tap the Whomping Willow.
+- **The Golden Snitch** darts about the Quidditch pitch, and now and then slips off to
+  wander another floor. It is very small. Tap it to catch it.
+- **Peeves** leaves ink behind him — CRASH!, Wheee! — and people mutter to themselves as
+  they walk. Errol occasionally lands. Badly.
+- Rarer faces: Lockhart, Umbridge, Quirrell (look at him closely), Krum and Fleur down by
+  the lake, Tonks, Madam Rosmerta on the Hogsmeade road, the owls, and — after dark —
+  Dementors at the gates, who leave no footprints at all.
+- **Dates the castle remembers**, in Central Time: thirteen birthdays (look for a star
+  over the ribbon), the first of April (the twins swap names), Hallowe'en (troll in the
+  dungeons; Nick's Deathday party in the crypt), the first of September, Valentine's Day,
+  the second of May, and Christmas.
+
+### Spells
+
+Type one into the search box and press Enter.
+
+| | |
+| --- | --- |
+| *Lumos* / *Nox* | Bring the lamps up, or go dark with only your wand for light |
+| *Homenum Revelio* | Reveal everyone on the floor, and count them |
+| *Alohomora* | Light up the secret passages and hidden rooms |
+| *Accio* + a name | Fly to them. *Accio Snitch* works too |
+| *Expecto Patronum* | Send a silver stag across the floor |
+| *Wingardium Leviosa* | Float every name |
+| *Riddikulus* | Give the boggarts their makeovers |
+| *Petrificus Totalus* | Freeze the whole castle |
+| *Obliviate* | Forget every footprint |
+| *Finite Incantatem* | End them all |
+
+The Unforgivable Curses are recognised. They are not rewarded.
 
 ## Technical notes
 
